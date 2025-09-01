@@ -40,7 +40,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      
+
       - name: Install musl-tools
         if: contains(matrix.target, 'musl')
         run: sudo apt-get install -y musl-tools
@@ -52,7 +52,7 @@ jobs:
       - name: Prepare and Package binary
         id: package
         env:
-          BINARY_NAME: your-app
+          BINARY_NAME: twitter
           TARGET_DIR: target/${{ matrix.target }}/release
         shell: bash
         run: |
@@ -61,7 +61,7 @@ jobs:
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             BINARY_EXT=".exe"
           fi
-          
+
           # Use a consistent, predictable path for the output
           # And ensure the binary exists
           BINARY_PATH="$TARGET_DIR/$BINARY_NAME$BINARY_EXT"
@@ -72,7 +72,7 @@ jobs:
 
           # Use matrix.archive_ext for the archive type
           ARCHIVE_NAME="${{ env.BINARY_NAME }}-${{ matrix.name }}.${{ matrix.archive_ext }}"
-          
+
           # Create archive based on OS
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             7z a "$ARCHIVE_NAME" "$BINARY_PATH"
