@@ -18,7 +18,7 @@ access_secret = "your_access_secret"
 ```
 
 ## Installation
-1. Download the latest binary from [GitHub releases](https://github.com/yourusername/twitter-cli/releases)
+1. Download the latest binary from [GitHub releases](https://github.com/StanleyMasinde/twitter/releases)
 2. Move it to your PATH:
 ```bash
 sudo mv twitter_cli /usr/local/bin/
