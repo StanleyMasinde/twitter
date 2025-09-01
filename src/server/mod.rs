@@ -4,10 +4,9 @@ use std::io::ErrorKind;
 
 use axum::Router;
 
-pub async fn run() {
+pub async fn run(port_param: Option<String>) {
     let default_port = String::from("3000");
-    let args: Vec<String> = std::env::args().collect();
-    let port = args.get(1).unwrap_or(&default_port);
+    let port = port_param.unwrap_or(default_port);
     let address = format!("127.0.0.1:{port}");
 
     let app = Router::new().nest("/api", routes::api::api_routes());
