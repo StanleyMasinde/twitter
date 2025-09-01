@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: linux-x64
+            archive_ext: tar.gz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            name: linux-arm64
+            archive_ext: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-13
+            name: darwin-x64
+            archive_ext: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-14
+            name: darwin-arm64
+            archive_ext: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x64
+            archive_ext: zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain and Target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Install musl-tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get install -y musl-tools
+        shell: bash
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare and Package binary
+        id: package
+        env:
+          BINARY_NAME: your-app
+          TARGET_DIR: target/${{ matrix.target }}/release
+        shell: bash
+        run: |
+          # Set the final binary name based on the target OS
+          BINARY_EXT=""
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            BINARY_EXT=".exe"
+          fi
+          
+          # Use a consistent, predictable path for the output
+          # And ensure the binary exists
+          BINARY_PATH="$TARGET_DIR/$BINARY_NAME$BINARY_EXT"
+          if [[ ! -f "$BINARY_PATH" ]]; then
+            echo "Error: Binary not found at $BINARY_PATH"
+            exit 1
+          fi
+
+          # Use matrix.archive_ext for the archive type
+          ARCHIVE_NAME="${{ env.BINARY_NAME }}-${{ matrix.name }}.${{ matrix.archive_ext }}"
+          
+          # Create archive based on OS
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            7z a "$ARCHIVE_NAME" "$BINARY_PATH"
+          else
+            tar czf "$ARCHIVE_NAME" -C "$TARGET_DIR" "$BINARY_NAME$BINARY_EXT"
+          fi
+
+          # Set the output path for the next step
+          echo "ARCHIVE_PATH=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.name }}
+          path: ${{ steps.package.outputs.ARCHIVE_PATH }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: List downloaded files for audit
+        run: find ./artifacts -name "*.zip" -o -name "*.tar.gz"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./artifacts/**/*.zip
+            ./artifacts/**/*.tar.gz
