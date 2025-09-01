@@ -10,4 +10,8 @@ pub struct Args {
     /// Server port
     #[arg[long]]
     pub port: Option<String>,
+
+    /// Create a new tweet
+    #[arg[short, long]]
+    pub tweet: Option<String>,
 }
