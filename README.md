@@ -18,11 +18,11 @@ access_secret = "your_access_secret"
 ```
 
 ## Installation
-1. Download the latest binary from [GitHub releases](https://github.com/StanleyMasinde/twitter/releases)
+1. Download the latest binary from [GitHub releases](https://github.com/yourusername/twitter-cli/releases)
 2. Move it to your PATH:
 ```bash
-sudo mv twitter_cli /usr/local/bin/
-sudo chmod +x /usr/local/bin/twitter_cli
+sudo mv twitter /usr/local/bin/
+sudo chmod +x /usr/local/bin/twitter
 ```
 
 ## Usage
@@ -30,16 +30,19 @@ sudo chmod +x /usr/local/bin/twitter_cli
 ### CLI Mode
 ```bash
 # Tweet
-twitter_cli --tweet "Building something cool today"
+twitter --tweet "Building something cool today"
 ```
 
 ### Server Mode
 ```bash
 # Start local server (default port 3000)
-twitter_cli --serve
+twitter --serve
+
+# Custom port
+twitter --serve --port 8080
 
 # Post via HTTP
-curl -X POST http://localhost:3000/api/tweet \
+curl -X POST http://localhost:3000/tweet \
   -H "Content-Type: application/json" \
   -d '{"text": "Building in public without the scroll trap"}'
 ```
