@@ -14,10 +14,6 @@ jobs:
             os: ubuntu-latest
             name: linux-x64
             archive_ext: tar.gz
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            name: linux-arm64
-            archive_ext: tar.gz
           - target: x86_64-apple-darwin
             os: macos-13
             name: darwin-x64
