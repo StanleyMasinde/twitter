@@ -18,9 +18,26 @@ access_secret = "your_access_secret"
 ```
 
 ## Installation
-1. Download the latest binary from [GitHub releases](https://github.com/yourusername/twitter-cli/releases)
-2. Move it to your PATH:
+
+Download the appropriate binary from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
+
+### Linux (x64)
 ```bash
+wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x64.tar.gz && tar -xzf twitter-linux-x64.tar.gz && rm twitter-linux-x64.tar.gz
+sudo mv twitter /usr/local/bin/
+sudo chmod +x /usr/local/bin/twitter
+```
+
+### macOS (Intel)
+```bash
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x64.tar.gz | tar -xz
+sudo mv twitter /usr/local/bin/
+sudo chmod +x /usr/local/bin/twitter
+```
+
+### macOS (Apple Silicon)
+```bash
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-arm64.tar.gz | tar -xz
 sudo mv twitter /usr/local/bin/
 sudo chmod +x /usr/local/bin/twitter
 ```
