@@ -22,10 +22,6 @@ jobs:
             os: macos-14
             name: darwin-arm64
             archive_ext: tar.gz
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            name: windows-x64
-            archive_ext: zip
 
     runs-on: ${{ matrix.os }}
 
@@ -98,7 +94,8 @@ jobs:
         run: find ./artifacts -name "*.zip" -o -name "*.tar.gz"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
           files: |
             ./artifacts/**/*.zip
