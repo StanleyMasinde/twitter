@@ -59,7 +59,7 @@ twitter --serve
 twitter --serve --port 8080
 
 # Post via HTTP
-curl -X POST http://localhost:3000/tweet \
+curl -X POST http://localhost:3000/api/tweet \
   -H "Content-Type: application/json" \
   -d '{"text": "Building in public without the scroll trap"}'
 ```
