@@ -16,6 +16,12 @@ consumer_secret = "your_consumer_secret"
 access_token = "your_access_token"
 access_secret = "your_access_secret"
 ```
+## Update App Permissions
+1. In the Twitter Developer Portal, go to your App -> **User authentication settings**
+2. Set **App permissions** to **Read and write**
+3. Save changes, then regenerate your Access Token & Secret
+4. Update your config.toml with the new values
+ > *NB: Ensure you regenerate your tokens after updating your app permissions, otherwise your old tokens will remain read-only.*
 
 ## Installation
 
