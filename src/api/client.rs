@@ -57,13 +57,11 @@ impl HttpClient for ApiClient {
             .header(reqwest::header::AUTHORIZATION, &self.bearer_token)
             .json(&body)
             .send()
-            .await?
-            .text()
             .await?;
 
         let response = Response {
-            status: 200,
-            content: res,
+            status: res.status().into(),
+            content: res.text().await?,
         };
         Ok(response)
     }
