@@ -53,16 +53,16 @@ sudo chmod +x /usr/local/bin/twitter
 ### CLI Mode
 ```bash
 # Tweet
-twitter --tweet "Building something cool today"
+twitter tweet --body "Building something cool today"
 ```
 
 ### Server Mode
 ```bash
 # Start local server (default port 3000)
-twitter --serve
+twitter serve
 
 # Custom port
-twitter --serve --port 8080
+twitter serve --port 8080
 
 # Post via HTTP
 curl -X POST http://localhost:3000/api/tweet \
