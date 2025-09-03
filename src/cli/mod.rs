@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use crate::{
     api::client::{ApiClient, HttpClient},
@@ -7,44 +7,45 @@ use crate::{
 };
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, author)]
 pub struct Args {
-    /// Run is server mode.
-    #[arg[short, long]]
-    pub serve: bool,
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    /// Server port
-    #[arg[long]]
-    pub port: Option<u16>,
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Run in server mode
+    Serve {
+        /// Specify the server port
+        #[arg(long)]
+        port: Option<u16>,
+    },
 
-    /// Create a new tweet
-    #[arg[short, long]]
-    pub tweet: Option<String>,
+    /// Create a new tweet.
+    Tweet {
+        /// The body of the tweet
+        #[arg(long, short, name = "body")]
+        body: String,
+    },
 }
 
 pub async fn run() {
-    let args = std::env::args().collect::<Vec<_>>();
-
-    if args.len() == 1 {
-        Args::parse_from(["", "--help"]);
-    }
     let args = Args::parse();
 
-    if args.serve {
-        let port = args.port;
-        server::run(port).await
-    }
+    match args.command {
+        Commands::Serve { port } => server::run(port).await,
+        Commands::Tweet { body } => {
+            let client = ApiClient::new();
+            let payload = CreateTweet { text: body };
+            let api_res = tweet::create(client, payload).await;
 
-    if let Some(tweet_text) = args.tweet {
-        let client = ApiClient::new();
-        let payload = CreateTweet { text: tweet_text };
-        let api_res = tweet::create(client, payload).await;
-
-        match api_res {
-            Ok(ok) => {
-                println!("{}", ok.content)
+            match api_res {
+                Ok(ok) => {
+                    println!("{}", ok.content)
+                }
+                Err(err) => println!("Error:{}", err),
             }
-            Err(err) => println!("Error:{}", err),
         }
     }
 }
