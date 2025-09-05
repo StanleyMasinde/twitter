@@ -44,7 +44,7 @@ pub async fn run() {
                 Some(tweet) => tweet,
                 None => {
                     let mut buf = String::new();
-                    io::stdin().read_to_string(&mut buf).unwrap();
+                    io::stdin().read_to_string(&mut buf).unwrap(); // I don't expect this to fail.
 
                     buf
                 }
