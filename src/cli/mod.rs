@@ -1,3 +1,5 @@
+use std::io::{self, Read};
+
 use clap::{Parser, Subcommand};
 
 use crate::{
@@ -26,7 +28,7 @@ enum Commands {
     Tweet {
         /// The body of the tweet
         #[arg(long, short, name = "body")]
-        body: String,
+        body: Option<String>,
     },
 }
 
@@ -37,7 +39,20 @@ pub async fn run() {
         Commands::Serve { port } => server::run(port).await,
         Commands::Tweet { body } => {
             let client = ApiClient::new();
-            let payload = CreateTweet { text: body };
+
+            let tweet_body = match body {
+                Some(tweet) => tweet,
+                None => {
+                    let mut buf = String::new();
+                    io::stdin()
+                        .read_to_string(&mut buf)
+                        .expect("Failed to read tweet!");
+
+                    buf.trim().to_string()
+                }
+            };
+
+            let payload = CreateTweet { text: tweet_body };
             let api_res = tweet::create(client, payload).await;
 
             match api_res {

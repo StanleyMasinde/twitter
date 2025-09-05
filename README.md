@@ -54,6 +54,12 @@ sudo chmod +x /usr/local/bin/twitter
 ```bash
 # Tweet
 twitter tweet --body "Building something cool today"
+
+# Or with piped input
+echo "I love CLIs" | twitter tweet
+
+# Or from text files
+cat drafts.txt | twitter tweet
 ```
 
 ### Server Mode
