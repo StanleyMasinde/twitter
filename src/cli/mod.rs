@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::{io::{self, IsTerminal, Read}, process};
 
 use clap::{Parser, Subcommand};
 
@@ -43,12 +43,17 @@ pub async fn run() {
             let tweet_body = match body {
                 Some(tweet) => tweet,
                 None => {
-                    let mut buf = String::new();
-                    io::stdin()
-                        .read_to_string(&mut buf)
-                        .expect("Failed to read tweet!");
+                    if !io::stdin().is_terminal() {
+                        let mut buf = String::new();
+                        io::stdin()
+                            .read_to_string(&mut buf)
+                            .expect("Failed to read tweet!");
 
-                    buf.trim().to_string()
+                        buf.trim().to_string()
+                    } else {
+                        println!("Could not find tweet body.");
+                        process::exit(1)
+                    }
                 }
             };
 
