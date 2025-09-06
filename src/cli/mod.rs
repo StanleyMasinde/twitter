@@ -1,4 +1,9 @@
-use std::{io::{self, IsTerminal, Read}, process};
+pub mod config;
+
+use std::{
+    io::{self, IsTerminal, Read},
+    process,
+};
 
 use clap::{Parser, Subcommand};
 
@@ -29,6 +34,13 @@ enum Commands {
         /// The body of the tweet
         #[arg(long, short, name = "body")]
         body: Option<String>,
+    },
+
+    /// Manage config
+    Config {
+        /// Open the config in an editor
+        #[arg(long, short)]
+        edit: bool,
     },
 }
 
@@ -65,6 +77,11 @@ pub async fn run() {
                     println!("{}", ok.content)
                 }
                 Err(err) => println!("Error:{}", err),
+            }
+        }
+        Commands::Config { edit } => {
+            if edit {
+                config::edit();
             }
         }
     }
