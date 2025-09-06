@@ -19,6 +19,6 @@ jobs:
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.8.0
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
