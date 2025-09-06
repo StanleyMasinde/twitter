@@ -41,6 +41,10 @@ enum Commands {
         /// Open the config in an editor
         #[arg(long, short)]
         edit: bool,
+
+        /// Show the config file.
+        #[arg(long)]
+        show: bool,
     },
 }
 
@@ -79,9 +83,11 @@ pub async fn run() {
                 Err(err) => println!("Error:{}", err),
             }
         }
-        Commands::Config { edit } => {
+        Commands::Config { edit, show } => {
             if edit {
                 config::edit();
+            } else if show {
+                config::show();
             }
         }
     }
