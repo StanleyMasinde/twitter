@@ -5,7 +5,7 @@ use std::{
     process,
 };
 
-use clap::{Command, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 use crate::{
     api::client::{ApiClient, HttpClient},
