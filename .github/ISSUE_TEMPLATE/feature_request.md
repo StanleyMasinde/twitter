@@ -1,20 +1,26 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest an idea for the Twitter CLI
 title: ''
-labels: ''
+labels: 'enhancement'
 assignees: ''
-
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Problem statement**
+Is your request related to a limitation or pain point? Describe clearly.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Proposed solution**
+What behaviour or feature would you like added? Include example command usage if relevant.
+```sh
+twitter timeline --limit 20
+```
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Alternatives considered**
+List any workarounds or alternative approaches you've thought about.
+
+**Environment**
+ - OS: [e.g. macOS 14.5, Ubuntu 24.04, Windows 11]
+ - Twitter CLI version: [run `twitter --version`]
 
 **Additional context**
-Add any other context or screenshots about the feature request here.
+Anything else helpful—use cases, mock output, references to other CLIs, etc.
