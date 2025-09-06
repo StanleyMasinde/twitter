@@ -1,9 +1,9 @@
-use std::fs;
+use std::{fmt::Display, fs};
 
 use dirs::home_dir;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub consumer_key: String,
     pub consumer_secret: String,
@@ -20,5 +20,15 @@ impl Config {
         let data = fs::read_to_string(config_dir).expect("Could not read config.");
 
         toml::from_str(&data).expect("Invalid config format.")
+    }
+}
+
+impl Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Consumer Key: {}\nConsumer Secret: {}\nAccess Token: {}\nAccess Token Secret: {}",
+            self.consumer_key, self.consumer_secret, self.access_token, self.access_secret
+        )
     }
 }

@@ -6,25 +6,7 @@ I love creating content on Twitter but twitter.com leads to doomscrolling. This 
 
 Simple CLI for posting to Twitter using their API v2. No authentication flow - just configure once and tweet.
 
-## Setup
-1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
-2. Create a new app and get your API credentials
-3. Create config file at `~/.config/twitter_cli/config.toml`:
-```toml
-consumer_key = "your_consumer_key"
-consumer_secret = "your_consumer_secret"
-access_token = "your_access_token"
-access_secret = "your_access_secret"
-```
-## Update App Permissions
-1. In the Twitter Developer Portal, go to your App -> **User authentication settings**
-2. Set **App permissions** to **Read and write**
-3. Save changes, then regenerate your Access Token & Secret
-4. Update your config.toml with the new values
- > *NB: Ensure you regenerate your tokens after updating your app permissions, otherwise your old tokens will remain read-only.*
-
 ## Installation
-
 Download the appropriate binary from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
 ### Linux (x64)
@@ -48,21 +30,65 @@ sudo mv twitter /usr/local/bin/
 sudo chmod +x /usr/local/bin/twitter
 ```
 
+## Configuration
+1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
+2. Create a new app and get your API credentials
+
+### Interactive Setup (Recommended)
+> [!WARNING]
+> This will override your existing config Only run it on setup.
+
+```bash
+twitter config --init
+```
+
+### Quick Edit
+```bash
+twitter config --edit
+```
+Opens your default editor (`$EDITOR`) with the config file. Creates `~/.config/twitter_cli/config.toml` if it doesn't exist.
+
+Expected format:
+```toml
+consumer_key = "your_consumer_key"
+consumer_secret = "your_consumer_secret"
+access_token = "your_access_token"
+access_secret = "your_access_secret"
+```
+
+### Manual Configuration
+Create config file at `~/.config/twitter_cli/config.toml` with the format above.
+
+### Validation
+```bash
+twitter config --show
+```
+
+## Update App Permissions
+If you face a 403 error when tweeting:
+
+1. In the Twitter Developer Portal, go to your App → **User authentication settings**
+2. Set **App permissions** to **Read and write**
+3. Save changes, then regenerate your Access Token & Secret
+4. Update your config with the new values
+
+> **NB:** Regenerate tokens after updating permissions, otherwise old tokens remain read-only.
+
 ## Usage
 
-### CLI Mode
+### Tweet in CLI Mode
 ```bash
 # Tweet
 twitter tweet --body "Building something cool today"
 
-# Or with piped input
+# Piped input
 echo "I love CLIs" | twitter tweet
 
-# Or from text files
+# From text files
 cat drafts.txt | twitter tweet
 ```
 
-### Server Mode
+### Tweet in Server Mode
 ```bash
 # Start local server (default port 3000)
 twitter serve
@@ -87,6 +113,7 @@ curl -X POST http://localhost:3000/api/tweet \
 ## Future Plans
 - Thread support via stdin piping
 - Media attachments
+- Multiple account profiles
 
 ## Tech Stack
 - Rust + Axum
