@@ -94,8 +94,9 @@ pub async fn run() {
                 config::show();
             } else if init {
                 config::init();
+            } else {
+                Args::parse_from(["", "config", "--help"]);
             }
-            Args::parse_from(["", "config", "--help"]);
         }
     }
 }
