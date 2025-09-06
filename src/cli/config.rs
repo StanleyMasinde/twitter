@@ -51,7 +51,7 @@ pub fn init() {
                 eprintln!("Config directory already exists.");
             }
             _ => {
-                eprintln!("An unknown error occoured.");
+                eprintln!("An unknown error occurred.");
                 process::exit(1);
             }
         },
