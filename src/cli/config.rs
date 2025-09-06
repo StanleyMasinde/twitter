@@ -4,12 +4,10 @@ use std::{
     process::{self, Command},
 };
 
-use crate::config::Config;
+use crate::{config::Config, utils};
 
 pub fn edit() {
-    let config_file = dirs::home_dir()
-        .unwrap()
-        .join(".config/twitter_cli/config.toml");
+    let config_file = utils::get_config_file();
 
     let editor = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
@@ -26,10 +24,7 @@ pub fn edit() {
 }
 
 pub fn show() {
-    let config_file = dirs::home_dir()
-        .unwrap()
-        .join(".config/twitter_cli/config.toml");
-
+    let config_file = utils::get_config_file();
     let file_content = fs::read_to_string(config_file).unwrap();
 
     let config: Config = toml::from_str(&file_content).unwrap();
@@ -56,9 +51,7 @@ pub fn init() {
             }
         },
     }
-    let config_file = dirs::home_dir()
-        .unwrap()
-        .join(".config/twitter_cli/config.toml");
+    let config_file = utils::get_config_file();
 
     let config = Config {
         consumer_key: "your_consumer_key".to_string(),
