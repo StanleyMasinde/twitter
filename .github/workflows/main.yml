@@ -33,36 +33,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > cliff.toml <<'EOF'
-          [changelog]
-          header = """
-          # Changelog
-          """
-          body = """
-          {% if version %}## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
-          {% for group, commits in commits | group_by(attribute="group") %}
-          ### {{ group | upper_first }}
-          {% for commit in commits %}
-          - {{ commit.message | split(pat="\n") | first }} \
-          ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/commit/{{ commit.id }}))
-          {% endfor %}
-          {% endfor %}
-          """
-
-          [git]
-          conventional_commits = true
-          filter_unconventional = true
-          commit_parsers = [
-          { message = "^feat", group = "Features" },
-          { message = "^fix",  group = "Bug Fixes" },
-          { message = "^docs", group = "Docs" },
-          { message = "^refactor", group = "Refactor" },
-          { message = "^test", group = "Tests" },
-          { message = "^ci",   group = "CI" },
-          { message = "^chore", group = "Chore" },
-          ]
-          tag_pattern = "v[0-9]*"
-          EOF
           # Generate full changelog; git-cliff detects the latest tag context.
           git cliff --latest --output CHANGELOG.md
           {
