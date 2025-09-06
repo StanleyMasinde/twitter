@@ -5,7 +5,7 @@ use std::{
     process,
 };
 
-use clap::{Parser, Subcommand};
+use clap::{Command, Parser, Subcommand};
 
 use crate::{
     api::client::{ApiClient, HttpClient},
@@ -95,6 +95,7 @@ pub async fn run() {
             } else if init {
                 config::init();
             }
+            Args::parse_from(["", "config", "--help"]);
         }
     }
 }
