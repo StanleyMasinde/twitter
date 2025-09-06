@@ -116,10 +116,6 @@ jobs:
           STAGE="$(mktemp -d)"
           install -m 0755 "$BIN" "$STAGE/${BINARY_NAME}"
 
-          # Optional: include LICENSE/README if present (nice for users)
-          [ -f LICENSE ] && cp LICENSE "$STAGE/"
-          [ -f README.md ] && cp README.md "$STAGE/"
-
           tar -C "$STAGE" -czf "$ARCHIVE" .
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
 
