@@ -1,9 +1,9 @@
 use std::{fmt::Display, fs};
 
 use dirs::home_dir;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub consumer_key: String,
     pub consumer_secret: String,

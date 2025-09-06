@@ -38,6 +38,10 @@ enum Commands {
 
     /// Manage config
     Config {
+        /// init the config file
+        #[arg(long)]
+        init: bool,
+
         /// Open the config in an editor
         #[arg(long, short)]
         edit: bool,
@@ -83,11 +87,13 @@ pub async fn run() {
                 Err(err) => println!("Error:{}", err),
             }
         }
-        Commands::Config { edit, show } => {
+        Commands::Config { edit, show, init } => {
             if edit {
                 config::edit();
             } else if show {
                 config::show();
+            } else if init {
+                config::init();
             }
         }
     }
