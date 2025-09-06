@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           # Generate full changelog; git-cliff detects the latest tag context.
-          git cliff --unreleased --output CHANGELOG.md
+          git cliff --latest --output CHANGELOG.md
           {
             echo "changelog<<EOF"
             cat CHANGELOG.md
@@ -109,8 +109,8 @@ jobs:
           # macOS/Linux: no .exe
           test -f "$BIN" || { echo "Binary missing: $BIN"; exit 1; }
 
-          # Name: twitter-vX.Y.Z-<platform>.tar.gz
-          ARCHIVE="${BINARY_NAME}-${VERSION}-${{ matrix.name }}.${{ matrix.archive_ext }}"
+          # Name: twitter-<platform>.tar.gz
+          ARCHIVE="${BINARY_NAME}-${{ matrix.name }}.${{ matrix.archive_ext }}"
 
           # Create a temporary staging dir to control archive layout
           STAGE="$(mktemp -d)"
