@@ -35,6 +35,9 @@ sudo chmod +x /usr/local/bin/twitter
 2. Create a new app and get your API credentials
 
 ### Interactive Setup (Recommended)
+> [!WARNING]
+> This will overide your existing config Only run it on setup.
+
 ```bash
 twitter config --init
 ```
