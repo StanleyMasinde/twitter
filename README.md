@@ -36,7 +36,7 @@ sudo chmod +x /usr/local/bin/twitter
 
 ### Interactive Setup (Recommended)
 > [!WARNING]
-> This will overide your existing config Only run it on setup.
+> This will override your existing config Only run it on setup.
 
 ```bash
 twitter config --init
