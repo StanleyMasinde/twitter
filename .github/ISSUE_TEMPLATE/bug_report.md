@@ -1,38 +1,34 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug in the Twitter CLI
 title: ''
-labels: ''
-assignees: ''
-
+labels: bug
+assignees: 'StanleyMasinde'
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Description**
+A clear and concise description of the issue.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Command(s) run**
+Paste the exact command(s) you ran, including any flags or arguments.
+```sh
+twitter tweet --body "hello world"
+```
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Actual behaviour**
+What happened when you ran the command?
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Expected behaviour**
+What did you expect to happen instead?
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**Environment**
+ - OS: [e.g. macOS 14.5, Ubuntu 24.04, Windows 11]
+ - Twitter CLI version: [run `twitter --version`]
+ - Installation method: [cargo install, prebuilt binary, etc.]
+ - Shell: [e.g. zsh, bash, PowerShell]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Logs / Output**
+Paste relevant output or error messages here. If possible, run with `RUST_LOG=debug` and include the log snippet.
 
 **Additional context**
-Add any other context about the problem here.
+Anything else useful—network conditions, rate limits, steps that seem to trigger it, etc.
