@@ -36,7 +36,7 @@ pub fn init() {
     let home_dir = dirs::home_dir().expect("Home Directory not found");
     let create_dir = fs::create_dir_all(home_dir.join(".config/twitter_cli"));
     match create_dir {
-        Ok(_) => println!(""),
+        Ok(_) => println!("Created home config dir."),
         Err(err) => match err.kind() {
             ErrorKind::PermissionDenied => {
                 eprintln!("You don't have permission to create the config dir.");
