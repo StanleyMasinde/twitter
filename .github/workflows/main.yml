@@ -20,7 +20,7 @@ jobs:
     name: Generate changelog
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full history for git-cliff)
+      - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
