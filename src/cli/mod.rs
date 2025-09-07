@@ -67,11 +67,14 @@ pub async fn run() {
                         let mut buf = String::new();
                         io::stdin()
                             .read_to_string(&mut buf)
-                            .expect("Failed to read tweet!");
+                            .unwrap_or_else(|e| {
+                                eprintln!("Failed to read tweet from stdin: {}", e);
+                                process::exit(1);
+                            });
 
                         buf.trim().to_string()
                     } else {
-                        println!("Could not find tweet body.");
+                        eprintln!("Error: No tweet body provided. Use --body flag or pipe input.");
                         process::exit(1)
                     }
                 }
@@ -82,18 +85,31 @@ pub async fn run() {
 
             match api_res {
                 Ok(ok) => {
-                    println!("{}", ok.content)
+                    println!("Tweet posted successfully!");
+                    println!("Response: {}", ok.content)
                 }
-                Err(err) => println!("Error:{}", err),
+                Err(err) => {
+                    eprintln!("Error posting tweet: {}", err);
+                    process::exit(1);
+                }
             }
         }
         Commands::Config { edit, show, init } => {
             if edit {
-                config::edit();
+                if let Err(e) = config::edit() {
+                    eprintln!("Error editing config: {}", e);
+                    process::exit(1);
+                }
             } else if show {
-                config::show();
+                if let Err(e) = config::show() {
+                    eprintln!("Error showing config: {}", e);
+                    process::exit(1);
+                }
             } else if init {
-                config::init();
+                if let Err(e) = config::init() {
+                    eprintln!("Error initializing config: {}", e);
+                    process::exit(1);
+                }
             } else {
                 Args::parse_from(["", "config", "--help"]);
             }

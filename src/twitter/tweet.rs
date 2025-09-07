@@ -1,15 +1,15 @@
 use crate::{
     api::client::{HttpClient, Response},
     config::Config,
+    error::Result,
 };
 use oauth::{HMAC_SHA1, Token};
-use reqwest::Error;
 use serde_json::json;
 
 use crate::{api::client::ApiClient, server::routes::api::CreateTweet};
 
-pub async fn create(mut client: ApiClient, payload: CreateTweet) -> Result<Response, Error> {
-    let cfg = Config::load();
+pub async fn create(client: ApiClient, payload: CreateTweet) -> Result<Response> {
+    let cfg = Config::load()?;
 
     let token = Token::from_parts(
         cfg.consumer_key,
@@ -25,4 +25,5 @@ pub async fn create(mut client: ApiClient, payload: CreateTweet) -> Result<Respo
         .with_bearer(&auth_header)
         .post(url, json!({ "text": payload.text }))
         .await
+        .map_err(|e| crate::error::TwitterError::ReqwestError(e))
 }

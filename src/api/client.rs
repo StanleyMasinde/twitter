@@ -1,4 +1,3 @@
-use log::info;
 use reqwest::Client;
 
 pub trait HttpClient {
@@ -26,9 +25,8 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
-    pub fn with_bearer(&mut self, token: &str) -> &Self {
-        self.bearer_token = token.to_string();
-
+    pub fn with_bearer(mut self, token: impl Into<String>) -> Self {
+        self.bearer_token = token.into();
         self
     }
 }
@@ -50,7 +48,6 @@ impl HttpClient for ApiClient {
     }
 
     async fn post(&self, url: &str, body: serde_json::Value) -> Result<Response, reqwest::Error> {
-        info!("foo: {}", self.bearer_token);
         let res = self
             .client
             .post(url)
@@ -72,7 +69,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn test_api_client() {
+    async fn test_api_client_get() {
         struct MockClient {}
 
         impl HttpClient for MockClient {
@@ -102,7 +99,51 @@ mod test {
 
         let http_client = MockClient::new();
 
-        let result = http_client.get("https://stanleymasinde.com").await.unwrap();
-        assert_eq!(result, "GET https://stanleymasinde.com".to_string())
+        let result = http_client.get("https://example.com").await.unwrap();
+        assert_eq!(result, "GET https://example.com".to_string())
+    }
+
+    #[tokio::test]
+    async fn test_api_client_post() {
+        struct MockClient {}
+
+        impl HttpClient for MockClient {
+            fn new() -> Self {
+                Self {}
+            }
+
+            async fn get(&self, _url: &str) -> Result<String, reqwest::Error> {
+                Ok("".to_string())
+            }
+
+            async fn post(
+                &self,
+                url: &str,
+                _body: serde_json::Value,
+            ) -> Result<Response, reqwest::Error> {
+                let response = Response {
+                    content: format!("POST {url}"),
+                    status: 201,
+                };
+
+                Ok(response)
+            }
+        }
+
+        let http_client = MockClient::new();
+        let body = serde_json::json!({"text": "test tweet"});
+
+        let result = http_client.post("https://api.twitter.com/2/tweets", body).await.unwrap();
+        assert_eq!(result.status, 201);
+        assert_eq!(result.content, "POST https://api.twitter.com/2/tweets");
+    }
+
+    #[test]
+    fn test_api_client_builder_pattern() {
+        let client = ApiClient::new();
+        let client_with_token = client.with_bearer("test_token");
+        
+        // Verify the client was moved (not copied) and token was set
+        assert_eq!(client_with_token.bearer_token, "test_token");
     }
 }
