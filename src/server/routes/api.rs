@@ -58,10 +58,10 @@ async fn create_tweet(
             res.content,
         ),
         Err(err) => {
-            warn!("{}", err);
+            warn!("{err}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Somethin broke: {}", err),
+                format!("Something went wrong: {err}"),
             )
         }
     }
