@@ -38,9 +38,9 @@ pub fn show() -> Result<()> {
     })?;
 
     let config: Config =
-        toml::from_str(&file_content).map_err(|e| TwitterError::TomlDeserializeError(e))?;
+        toml::from_str(&file_content).map_err(TwitterError::TomlDeserializeError)?;
 
-    println!("{}", config);
+    println!("{config}");
     Ok(())
 }
 
@@ -81,7 +81,7 @@ pub fn init() -> Result<()> {
     };
 
     let serialized_config =
-        toml::to_string(&config).map_err(|e| TwitterError::TomlSerializeError(e))?;
+        toml::to_string(&config).map_err(TwitterError::TomlSerializeError)?;
 
     fs::write(&config_file, serialized_config).map_err(|e| ConfigError::WriteFailed {
         path: config_file.to_string_lossy().to_string(),

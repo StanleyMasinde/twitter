@@ -150,13 +150,13 @@ mod tests {
     #[test]
     fn test_config_error_display() {
         let error = ConfigError::HomeDirNotFound;
-        assert_eq!(format!("{}", error), "Home directory not found");
+        assert_eq!(format!("{error}"), "Home directory not found");
 
         let error = ConfigError::MissingField {
             field: "test_field".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Missing required field in config: test_field"
         );
     }
@@ -164,22 +164,22 @@ mod tests {
     #[test]
     fn test_api_error_display() {
         let error = ApiError::InvalidCredentials;
-        assert_eq!(format!("{}", error), "Invalid API credentials");
+        assert_eq!(format!("{error}"), "Invalid API credentials");
 
         let error = ApiError::RateLimited;
-        assert_eq!(format!("{}", error), "Rate limited by Twitter API");
+        assert_eq!(format!("{error}"), "Rate limited by Twitter API");
     }
 
     #[test]
     fn test_twitter_error_display() {
         let error = TwitterError::ConfigError(ConfigError::HomeDirNotFound);
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Configuration error: Home directory not found"
         );
 
         let error = TwitterError::ApiError(ApiError::InvalidCredentials);
-        assert_eq!(format!("{}", error), "API error: Invalid API credentials");
+        assert_eq!(format!("{error}"), "API error: Invalid API credentials");
     }
 
     #[test]

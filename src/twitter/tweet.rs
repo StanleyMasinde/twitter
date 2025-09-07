@@ -25,5 +25,5 @@ pub async fn create(client: ApiClient, payload: CreateTweet) -> Result<Response>
         .with_bearer(&auth_header)
         .post(url, json!({ "text": payload.text }))
         .await
-        .map_err(|e| crate::error::TwitterError::ReqwestError(e))
+        .map_err(crate::error::TwitterError::ReqwestError)
 }

@@ -25,7 +25,7 @@ impl Config {
         })?;
 
         let config: Config =
-            toml::from_str(&data).map_err(|e| TwitterError::TomlDeserializeError(e))?;
+            toml::from_str(&data).map_err(TwitterError::TomlDeserializeError)?;
 
         // Validate that all required fields are present and not default values
         if config.consumer_key == "your_consumer_key" {

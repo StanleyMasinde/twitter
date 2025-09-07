@@ -66,7 +66,7 @@ pub async fn run() {
                     if !io::stdin().is_terminal() {
                         let mut buf = String::new();
                         io::stdin().read_to_string(&mut buf).unwrap_or_else(|e| {
-                            eprintln!("Failed to read tweet from stdin: {}", e);
+                            eprintln!("Failed to read tweet from stdin: {e}");
                             process::exit(1);
                         });
 
@@ -87,7 +87,7 @@ pub async fn run() {
                     println!("Response: {}", ok.content)
                 }
                 Err(err) => {
-                    eprintln!("Error posting tweet: {}", err);
+                    eprintln!("Error posting tweet: {err}");
                     process::exit(1);
                 }
             }
@@ -95,17 +95,17 @@ pub async fn run() {
         Commands::Config { edit, show, init } => {
             if edit {
                 if let Err(e) = config::edit() {
-                    eprintln!("Error editing config: {}", e);
+                    eprintln!("Error editing config: {e}");
                     process::exit(1);
                 }
             } else if show {
                 if let Err(e) = config::show() {
-                    eprintln!("Error showing config: {}", e);
+                    eprintln!("Error showing config: {e}");
                     process::exit(1);
                 }
             } else if init {
                 if let Err(e) = config::init() {
-                    eprintln!("Error initializing config: {}", e);
+                    eprintln!("Error initializing config: {e}");
                     process::exit(1);
                 }
             } else {
