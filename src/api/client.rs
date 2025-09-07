@@ -133,7 +133,10 @@ mod test {
         let http_client = MockClient::new();
         let body = serde_json::json!({"text": "test tweet"});
 
-        let result = http_client.post("https://api.twitter.com/2/tweets", body).await.unwrap();
+        let result = http_client
+            .post("https://api.twitter.com/2/tweets", body)
+            .await
+            .unwrap();
         assert_eq!(result.status, 201);
         assert_eq!(result.content, "POST https://api.twitter.com/2/tweets");
     }
@@ -142,7 +145,7 @@ mod test {
     fn test_api_client_builder_pattern() {
         let client = ApiClient::new();
         let client_with_token = client.with_bearer("test_token");
-        
+
         // Verify the client was moved (not copied) and token was set
         assert_eq!(client_with_token.bearer_token, "test_token");
     }

@@ -14,11 +14,24 @@ pub enum TwitterError {
 #[derive(Debug)]
 pub enum ConfigError {
     HomeDirNotFound,
-    ReadFailed { path: String, source: std::io::Error },
-    WriteFailed { path: String, source: std::io::Error },
-    InvalidFormat { source: toml::de::Error },
-    MissingField { field: String },
-    EditorFailed { editor: String, source: std::io::Error },
+    ReadFailed {
+        path: String,
+        source: std::io::Error,
+    },
+    WriteFailed {
+        path: String,
+        source: std::io::Error,
+    },
+    InvalidFormat {
+        source: toml::de::Error,
+    },
+    MissingField {
+        field: String,
+    },
+    EditorFailed {
+        editor: String,
+        source: std::io::Error,
+    },
 }
 
 #[derive(Debug)]
@@ -139,8 +152,13 @@ mod tests {
         let error = ConfigError::HomeDirNotFound;
         assert_eq!(format!("{}", error), "Home directory not found");
 
-        let error = ConfigError::MissingField { field: "test_field".to_string() };
-        assert_eq!(format!("{}", error), "Missing required field in config: test_field");
+        let error = ConfigError::MissingField {
+            field: "test_field".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Missing required field in config: test_field"
+        );
     }
 
     #[test]
@@ -155,7 +173,10 @@ mod tests {
     #[test]
     fn test_twitter_error_display() {
         let error = TwitterError::ConfigError(ConfigError::HomeDirNotFound);
-        assert_eq!(format!("{}", error), "Configuration error: Home directory not found");
+        assert_eq!(
+            format!("{}", error),
+            "Configuration error: Home directory not found"
+        );
 
         let error = TwitterError::ApiError(ApiError::InvalidCredentials);
         assert_eq!(format!("{}", error), "API error: Invalid API credentials");

@@ -19,35 +19,38 @@ impl Config {
             .ok_or(ConfigError::HomeDirNotFound)?
             .join(".config/twitter_cli/config.toml");
 
-        let data = fs::read_to_string(&config_dir)
-            .map_err(|e| ConfigError::ReadFailed {
-                path: config_dir.to_string_lossy().to_string(),
-                source: e,
-            })?;
+        let data = fs::read_to_string(&config_dir).map_err(|e| ConfigError::ReadFailed {
+            path: config_dir.to_string_lossy().to_string(),
+            source: e,
+        })?;
 
-        let config: Config = toml::from_str(&data)
-            .map_err(|e| TwitterError::TomlDeserializeError(e))?;
+        let config: Config =
+            toml::from_str(&data).map_err(|e| TwitterError::TomlDeserializeError(e))?;
 
         // Validate that all required fields are present and not default values
         if config.consumer_key == "your_consumer_key" {
             return Err(ConfigError::MissingField {
                 field: "consumer_key".to_string(),
-            }.into());
+            }
+            .into());
         }
         if config.consumer_secret == "your_consumer_secret" {
             return Err(ConfigError::MissingField {
                 field: "consumer_secret".to_string(),
-            }.into());
+            }
+            .into());
         }
         if config.access_token == "your_access_token" {
             return Err(ConfigError::MissingField {
                 field: "access_token".to_string(),
-            }.into());
+            }
+            .into());
         }
         if config.access_secret == "your_access_secret" {
             return Err(ConfigError::MissingField {
                 field: "access_secret".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(config)

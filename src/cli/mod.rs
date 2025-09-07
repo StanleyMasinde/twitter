@@ -65,12 +65,10 @@ pub async fn run() {
                 None => {
                     if !io::stdin().is_terminal() {
                         let mut buf = String::new();
-                        io::stdin()
-                            .read_to_string(&mut buf)
-                            .unwrap_or_else(|e| {
-                                eprintln!("Failed to read tweet from stdin: {}", e);
-                                process::exit(1);
-                            });
+                        io::stdin().read_to_string(&mut buf).unwrap_or_else(|e| {
+                            eprintln!("Failed to read tweet from stdin: {}", e);
+                            process::exit(1);
+                        });
 
                         buf.trim().to_string()
                     } else {

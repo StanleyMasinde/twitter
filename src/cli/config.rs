@@ -1,10 +1,10 @@
-use std::{
-    env, fs,
-    io::ErrorKind,
-    process::Command,
-};
+use std::{env, fs, io::ErrorKind, process::Command};
 
-use crate::{config::Config, error::{ConfigError, Result, TwitterError}, utils};
+use crate::{
+    config::Config,
+    error::{ConfigError, Result, TwitterError},
+    utils,
+};
 
 pub fn edit() -> Result<()> {
     let config_file = utils::get_config_file()?;
@@ -26,20 +26,19 @@ pub fn edit() -> Result<()> {
     } else {
         eprintln!("Editor exited with non-zero status code.");
     }
-    
+
     Ok(())
 }
 
 pub fn show() -> Result<()> {
     let config_file = utils::get_config_file()?;
-    let file_content = fs::read_to_string(&config_file)
-        .map_err(|e| ConfigError::ReadFailed {
-            path: config_file.to_string_lossy().to_string(),
-            source: e,
-        })?;
+    let file_content = fs::read_to_string(&config_file).map_err(|e| ConfigError::ReadFailed {
+        path: config_file.to_string_lossy().to_string(),
+        source: e,
+    })?;
 
-    let config: Config = toml::from_str(&file_content)
-        .map_err(|e| TwitterError::TomlDeserializeError(e))?;
+    let config: Config =
+        toml::from_str(&file_content).map_err(|e| TwitterError::TomlDeserializeError(e))?;
 
     println!("{}", config);
     Ok(())
@@ -48,7 +47,7 @@ pub fn show() -> Result<()> {
 pub fn init() -> Result<()> {
     let home_dir = dirs::home_dir().ok_or(ConfigError::HomeDirNotFound)?;
     let config_dir = home_dir.join(".config/twitter_cli");
-    
+
     match fs::create_dir_all(&config_dir) {
         Ok(_) => println!("Created config directory: {}", config_dir.display()),
         Err(err) => match err.kind() {
@@ -56,7 +55,8 @@ pub fn init() -> Result<()> {
                 return Err(ConfigError::WriteFailed {
                     path: config_dir.to_string_lossy().to_string(),
                     source: err,
-                }.into());
+                }
+                .into());
             }
             ErrorKind::AlreadyExists => {
                 println!("Config directory already exists: {}", config_dir.display());
@@ -65,11 +65,12 @@ pub fn init() -> Result<()> {
                 return Err(ConfigError::WriteFailed {
                     path: config_dir.to_string_lossy().to_string(),
                     source: err,
-                }.into());
+                }
+                .into());
             }
         },
     }
-    
+
     let config_file = utils::get_config_file()?;
 
     let config = Config {
@@ -79,15 +80,14 @@ pub fn init() -> Result<()> {
         access_secret: "your_access_secret".to_string(),
     };
 
-    let serialized_config = toml::to_string(&config)
-        .map_err(|e| TwitterError::TomlSerializeError(e))?;
+    let serialized_config =
+        toml::to_string(&config).map_err(|e| TwitterError::TomlSerializeError(e))?;
 
-    fs::write(&config_file, serialized_config)
-        .map_err(|e| ConfigError::WriteFailed {
-            path: config_file.to_string_lossy().to_string(),
-            source: e,
-        })?;
-    
+    fs::write(&config_file, serialized_config).map_err(|e| ConfigError::WriteFailed {
+        path: config_file.to_string_lossy().to_string(),
+        source: e,
+    })?;
+
     println!("Config file created at: {}", config_file.display());
     println!("Please edit the file and fill in your Twitter API credentials.");
     Ok(())
