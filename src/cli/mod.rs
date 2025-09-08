@@ -1,10 +1,10 @@
 pub mod config;
 
 use std::{
-    env::{self, temp_dir},
+    env::temp_dir,
     fs,
     io::{self, IsTerminal, Read},
-    process::{self, Command},
+    process,
 };
 
 use clap::{Parser, Subcommand};
@@ -13,6 +13,7 @@ use crate::{
     api::client::{ApiClient, HttpClient},
     server::{self, routes::api::CreateTweet},
     twitter::tweet,
+    utils,
 };
 
 #[derive(Parser, Debug)]
@@ -73,18 +74,8 @@ pub async fn run() {
 
                         buf.trim().to_string()
                     } else {
-                        let editor = env::var("EDITOR")
-                            .or_else(|_| env::var("VISUAL"))
-                            .unwrap_or_else(|_| "vi".to_string());
-
-                        let file_name = "new_tweet.txt";
-
-                        let temp_file = temp_dir().join(file_name);
-
-                        let status = Command::new(editor)
-                            .arg(&temp_file)
-                            .status()
-                            .expect("Failed to open the editor.");
+                        let temp_file = temp_dir().join("tweet.txt");
+                        let status = utils::open_editor(&temp_file);
 
                         if status.success() {
                             match fs::read_to_string(&temp_file) {
@@ -92,7 +83,7 @@ pub async fn run() {
                                     let _ = fs::remove_file(temp_file);
 
                                     if tweet.is_empty() {
-                                       println!("Could not find the Tweet text. Exiting.");
+                                        println!("Could not find the Tweet text. Exiting.");
                                         process::exit(0);
                                     } else {
                                         tweet
