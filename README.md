@@ -86,6 +86,10 @@ echo "I love CLIs" | twitter tweet
 
 # From text files
 cat drafts.txt | twitter tweet
+
+# Edit tweet in an editor
+# Omit --body and it will launch your default terminal editor. Like Vim or Nano.
+twitter tweet
 ```
 
 ### Tweet in Server Mode
