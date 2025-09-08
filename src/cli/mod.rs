@@ -1,8 +1,10 @@
 pub mod config;
 
 use std::{
+    env::{self, temp_dir},
+    fs,
     io::{self, IsTerminal, Read},
-    process,
+    process::{self, Command},
 };
 
 use clap::{Parser, Subcommand};
@@ -71,8 +73,39 @@ pub async fn run() {
 
                         buf.trim().to_string()
                     } else {
-                        println!("Could not find tweet body.");
-                        process::exit(1)
+                        let editor = env::var("EDITOR")
+                            .or_else(|_| env::var("VISUAL"))
+                            .unwrap_or_else(|_| "vi".to_string());
+
+                        let file_name = "new_tweet.txt";
+
+                        let temp_file = temp_dir().join(file_name);
+
+                        let status = Command::new(editor)
+                            .arg(&temp_file)
+                            .status()
+                            .expect("Failed to open the editor.");
+
+                        if status.success() {
+                            match fs::read_to_string(&temp_file) {
+                                Ok(tweet) => {
+                                    let _ = fs::remove_file(temp_file);
+
+                                    if tweet.is_empty() {
+                                       println!("Could not find the Tweet text. Exiting.");
+                                        process::exit(0);
+                                    } else {
+                                        tweet
+                                    }
+                                }
+                                Err(_) => {
+                                    eprintln!("Failed to read the tweet.");
+                                    process::exit(1);
+                                }
+                            }
+                        } else {
+                            process::exit(1)
+                        }
                     }
                 }
             };
