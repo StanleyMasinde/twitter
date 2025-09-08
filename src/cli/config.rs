@@ -1,22 +1,11 @@
-use std::{
-    env, fs,
-    io::ErrorKind,
-    process::{self, Command},
-};
+use std::{fs, io::ErrorKind, process};
 
 use crate::{config::Config, utils};
 
 pub fn edit() {
     let config_file = utils::get_config_file();
 
-    let editor = env::var("EDITOR")
-        .or_else(|_| env::var("VISUAL"))
-        .unwrap_or_else(|_| "vi".to_string());
-
-    let status = Command::new(editor)
-        .arg(config_file)
-        .status()
-        .expect("Failed to open the editor.");
+    let status = utils::open_editor(&config_file);
 
     if status.success() {
         println!("Config edited.")
