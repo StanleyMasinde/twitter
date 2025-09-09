@@ -28,7 +28,7 @@ impl Config {
         match toml::from_str::<Self>(&data) {
             Ok(cfg) => cfg,
             Err(_) => {
-                eprintln!("The config file is malformed. Please run twitter config --init.");
+                eprintln!("The config file is malformed. Please run twitter config --init");
                 process::exit(1)
             }
         }
