@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs};
+use std::{fmt::Display, fs, process};
 
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
@@ -17,9 +17,21 @@ impl Config {
             .expect("Home dir not found!")
             .join(".config/twitter_cli/config.toml");
 
-        let data = fs::read_to_string(config_dir).expect("Could not read config.");
+        let data = match fs::read_to_string(config_dir) {
+            Ok(data) => data,
+            Err(_) => {
+                eprintln!("Failed to read the config file.\nPlease run twitter config --init");
+                process::exit(1)
+            }
+        };
 
-        toml::from_str(&data).expect("Invalid config format.")
+        match toml::from_str::<Self>(&data) {
+            Ok(cfg) => cfg,
+            Err(_) => {
+                eprintln!("The config file is malformed. Please run twitter config --init.");
+                process::exit(1)
+            }
+        }
     }
 }
 
