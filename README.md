@@ -61,7 +61,8 @@ Create config file at `~/.config/twitter_cli/config.toml` with the format above.
 
 ### Validation
 ```bash
-twitter config --show
+twitter config --show # Visual preview
+twitter config --validate # Check for issues
 ```
 
 ## Update App Permissions
