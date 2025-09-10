@@ -35,11 +35,9 @@ jobs:
           set -euo pipefail
           # Generate full changelog; git-cliff detects the latest tag context.
           git cliff --latest --output CHANGELOG.md
-          {
-            echo "changelog<<EOF"
-            cat CHANGELOG.md
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          cat CHANGELOG.md >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Upload changelog artifact
         uses: actions/upload-artifact@v4
