@@ -1,4 +1,4 @@
-use std::{fs, io::ErrorKind, process};
+use std::{fs, io::ErrorKind, os::unix::fs::PermissionsExt, process};
 
 use crate::{config::Config, utils};
 
@@ -22,10 +22,22 @@ pub fn show() {
 }
 
 pub fn init() {
-    let home_dir = dirs::home_dir().expect("Home Directory not found");
-    let create_dir = fs::create_dir_all(home_dir.join(".config/twitter_cli"));
+    let _home_dir = dirs::home_dir().expect("Home Directory not found");
+    let config_dir = utils::get_config_dir();
+    let create_dir = fs::create_dir_all(&config_dir);
     match create_dir {
-        Ok(_) => println!("Created home config dir."),
+        Ok(_) => {
+            println!("Created home config dir.");
+            let perms = fs::Permissions::from_mode(0o700);
+            if fs::set_permissions(&config_dir, perms).is_ok() {
+                println!("Config dir permissions set to 700")
+            } else {
+                eprintln!(
+                    "Failed to set permissions\nPlease run chmod 700 {}",
+                    config_dir.to_str().unwrap()
+                )
+            }
+        }
         Err(err) => match err.kind() {
             ErrorKind::PermissionDenied => {
                 eprintln!("You don't have permission to create the config dir.");
@@ -40,7 +52,18 @@ pub fn init() {
             }
         },
     }
+
     let config_file = utils::get_config_file();
+
+    let file_perms = fs::Permissions::from_mode(0o600);
+    if fs::set_permissions(&config_file, file_perms).is_ok() {
+        println!("Config file permissions set to 600")
+    } else {
+        eprintln!(
+            "Failed to set permissions for config file\nPlease run chmod 600 {}",
+            config_file.to_str().unwrap()
+        )
+    }
 
     let config = Config {
         consumer_key: "your_consumer_key".to_string(),
