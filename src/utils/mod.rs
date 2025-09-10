@@ -37,6 +37,7 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
                 "⚠️  Permissions for {:?} are {:o}, expected {:o}",
                 path, mode, expected
             );
+            eprintln!("Run chmod {:o} {:?}", expected, path)
         }
     }
 }
