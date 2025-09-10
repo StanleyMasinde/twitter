@@ -35,12 +35,26 @@ jobs:
           set -euo pipefail
           # Generate full changelog; git-cliff detects the latest tag context.
           git cliff --latest --output CHANGELOG.md >/dev/null
-          delimiter=$(openssl rand -hex 8)
+          
+          # Ensure changelog has content and no control characters
+          if [[ ! -s "CHANGELOG.md" ]]; then
+            echo "Error: CHANGELOG.md is empty" >&2
+            exit 1
+          fi
+          
+          # Use a guaranteed unique delimiter with no special chars that could appear in content
+          delimiter="GITHUB_ACTIONS_DELIMITER_$(date +%Y%m%d_%H%M%S)_$(openssl rand -hex 8)"
+          echo "Generated delimiter: $delimiter" >&2
+          
+          # Write to GITHUB_OUTPUT with explicit error handling
           {
             echo "changelog<<${delimiter}"
-            cat CHANGELOG.md
+            # Ensure clean content by removing any potential problematic characters
+            cat CHANGELOG.md | tr -d '\r'
             echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
+          
+          echo "Successfully wrote changelog to GITHUB_OUTPUT" >&2
 
       - name: Upload changelog artifact
         uses: actions/upload-artifact@v4
@@ -143,12 +157,26 @@ jobs:
           set -euo pipefail
           CHANGELOG_PATH="artifacts/changelog/CHANGELOG.md"
           test -f "$CHANGELOG_PATH" || { echo "Missing changelog artifact"; exit 1; }
-          delimiter=$(openssl rand -hex 8)
+          
+          # Ensure changelog has content
+          if [[ ! -s "$CHANGELOG_PATH" ]]; then
+            echo "Error: Changelog artifact is empty" >&2
+            exit 1
+          fi
+          
+          # Use a guaranteed unique delimiter with no special chars that could appear in content
+          delimiter="GITHUB_ACTIONS_DELIMITER_$(date +%Y%m%d_%H%M%S)_$(openssl rand -hex 8)"
+          echo "Generated delimiter: $delimiter" >&2
+          
+          # Write to GITHUB_OUTPUT with explicit error handling
           {
             echo "changelog<<${delimiter}"
-            cat "$CHANGELOG_PATH"
+            # Ensure clean content by removing any potential problematic characters
+            cat "$CHANGELOG_PATH" | tr -d '\r'
             echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
+          
+          echo "Successfully wrote changelog to GITHUB_OUTPUT" >&2
 
       - name: List artifacts
         run: find artifacts -type f -maxdepth 2 -name "*.tar.gz" -print
