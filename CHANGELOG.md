@@ -16,7 +16,13 @@
 
 - Improve error handling in the condig load logic by @StanleyMasinde([2c2954e](https://github.com/StanleyMasinde/twitter/commit/2c2954ee0fe71e6fe1cadd2184735f4198b14fe8))
 
+### 📚 Documentation
 
+- Add changelog and configure git cliff([4bdc1d0](https://github.com/StanleyMasinde/twitter/commit/4bdc1d0ecebe7f2690592accbc507300547d535d))
+
+
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.6.0...## [0.6.0] - 2025-09-08
 
 ### 🚀 Features
@@ -37,6 +43,8 @@
 - Move the open editor command to utils by @StanleyMasinde([d10f15b](https://github.com/StanleyMasinde/twitter/commit/d10f15b2f75f2b3fc7332860fb5036b02b80408e))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.5.0...v0.6.0## [0.5.0] - 2025-09-06
 
 ### 🚀 Features
@@ -77,6 +85,8 @@
 - Remove license and READEME in archives by @StanleyMasinde([85e0409](https://github.com/StanleyMasinde/twitter/commit/85e040961c0b08a34a39a2de60d4915c5dc82ee5))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.7...v0.5.0## [0.4.7] - 2025-09-06
 
 ### 🧹 Chore
@@ -90,6 +100,8 @@
 - CONTRIBUTING.md with contribution guidelines by @StanleyMasinde([f62e419](https://github.com/StanleyMasinde/twitter/commit/f62e41931d50c9f1b295cf21bd8a3ad5dff45d1a))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.6...v0.4.7## [0.4.6] - 2025-09-06
 
 ### 💼 Other
@@ -97,6 +109,8 @@
 - Tag v0.4.6 by @StanleyMasinde([8511089](https://github.com/StanleyMasinde/twitter/commit/8511089008278ac643740c1c549cec1d0cd065a4))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.5...v0.4.6## [0.4.5] - 2025-09-06
 
 ### 🧹 Chore
@@ -104,6 +118,8 @@
 - Release version 0.4.5 by @StanleyMasinde([3b33c2c](https://github.com/StanleyMasinde/twitter/commit/3b33c2c044a6c758edaf83f93cf97ba6a0ad992e))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.4...v0.4.5## [0.4.4] - 2025-09-06
 
 ### 🧹 Chore
@@ -115,6 +131,8 @@
 - Use git-cliff latest and remove version from archives by @StanleyMasinde([b3ea472](https://github.com/StanleyMasinde/twitter/commit/b3ea472913664876a9ec76adab33d655e356c47c))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.3...v0.4.4## [0.4.3] - 2025-09-05
 
 ### 🧹 Chore
@@ -123,6 +141,8 @@
 - Update the lockfile to 0.4.2 by @StanleyMasinde([3b9fb80](https://github.com/StanleyMasinde/twitter/commit/3b9fb80beae2b7d78c1bd24647cb2d6fd11b9065))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.2...v0.4.3## [0.4.2] - 2025-09-05
 
 ### 🚀 Features
@@ -134,6 +154,8 @@
 - Release version 0.4.2 by @StanleyMasinde([7614ed6](https://github.com/StanleyMasinde/twitter/commit/7614ed6046ba73352c815431d120207663a9e371))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.1...v0.4.2## [0.4.1] - 2025-09-05
 
 ### 🐛 Bug Fixes
@@ -145,6 +167,8 @@
 - Release version 0.4.1 by @StanleyMasinde([c01fb67](https://github.com/StanleyMasinde/twitter/commit/c01fb67bd56a937e5c796001c21d2d8d599047c7))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.4.0...v0.4.1## [0.4.0] - 2025-09-05
 
 ### 🚀 Features
@@ -161,6 +185,8 @@
 - Document the new pipe funcntionality by @StanleyMasinde([d12306e](https://github.com/StanleyMasinde/twitter/commit/d12306e3c38e0919e60f568de8d00417b3d93412))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.3.0...v0.4.0## [0.3.0] - 2025-09-03
 
 ### 🚀 Features
@@ -173,6 +199,8 @@
 - Update the documentation for the new cli format by @StanleyMasinde([4a78c94](https://github.com/StanleyMasinde/twitter/commit/4a78c946c73226406c9331b8e06d28673aede731))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.2.0...v0.3.0## [0.2.0] - 2025-09-02
 
 ### 🧹 Chore
@@ -195,6 +223,9 @@
 - Update README with note on app permissions and token regeneration by @abubakar508([2dd5057](https://github.com/StanleyMasinde/twitter/commit/2dd5057b81ef21219e22ee3d955284c0af8ef638))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
+- [@abubakar508](https://github.com/abubakar508)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/v0.1.0...v0.2.0## [0.1.0] - 2025-09-02
 
 ### 🐛 Bug Fixes
@@ -209,4 +240,6 @@
 - **CI**: Remove ARM Linux by @StanleyMasinde([40e87a6](https://github.com/StanleyMasinde/twitter/commit/40e87a661be7d6ffbac6f5e8fa456324398248b6))
 
 
+## Contributors
+- [@StanleyMasinde](https://github.com/StanleyMasinde)
 **Full Changelog**: https://github.com/StanleyMasinde/twitter/compare/...v0.1.0
