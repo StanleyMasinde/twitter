@@ -35,10 +35,11 @@ jobs:
           set -euo pipefail
           # Generate full changelog; git-cliff detects the latest tag context.
           git cliff --latest --output CHANGELOG.md >/dev/null
+          delimiter=$(openssl rand -hex 8)
           {
-            echo "changelog<<EOF"
+            echo "changelog<<${delimiter}"
             cat CHANGELOG.md
-            echo "EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload changelog artifact
@@ -142,10 +143,11 @@ jobs:
           set -euo pipefail
           CHANGELOG_PATH="artifacts/changelog/CHANGELOG.md"
           test -f "$CHANGELOG_PATH" || { echo "Missing changelog artifact"; exit 1; }
+          delimiter=$(openssl rand -hex 8)
           {
-            echo "changelog<<EOF"
+            echo "changelog<<${delimiter}"
             cat "$CHANGELOG_PATH"
-            echo "EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: List artifacts
