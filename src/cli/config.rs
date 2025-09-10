@@ -14,11 +14,15 @@ pub fn edit() {
 
 pub fn show() {
     let config_file = utils::get_config_file();
-    let file_content = fs::read_to_string(config_file).unwrap();
-
-    let config: Config = toml::from_str(&file_content).unwrap();
-
-    println!("{}", config);
+    if let Ok(file_content) = fs::read_to_string(config_file) {
+        if let Ok(config) = toml::from_str::<Config>(&file_content) {
+            println!("{}", config);
+        } else {
+            eprintln!("Invalid config format.\nPlease run twitter config --init")
+        }
+    } else {
+        eprintln!("Failed to read to config file.\nPlease run twitter config --init")
+    }
 }
 
 pub fn init() {

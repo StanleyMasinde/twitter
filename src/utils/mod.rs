@@ -6,12 +6,14 @@ use std::{
 };
 
 pub fn get_config_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(".config/twitter_cli")
+    dirs::home_dir()
+        .expect("Home directory missing!")
+        .join(".config/twitter_cli")
 }
 
 pub fn get_config_file() -> PathBuf {
     dirs::home_dir()
-        .unwrap()
+        .expect("Home directory missing!")
         .join(".config/twitter_cli/config.toml")
 }
 
