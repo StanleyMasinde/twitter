@@ -68,11 +68,16 @@ pub async fn run() {
                 None => {
                     if !io::stdin().is_terminal() {
                         let mut buf = String::new();
-                        io::stdin()
-                            .read_to_string(&mut buf)
-                            .expect("Failed to read tweet!");
+                        let read_stdin_string = io::stdin().read_to_string(&mut buf);
 
-                        buf.trim().to_string()
+                        if read_stdin_string.is_ok() {
+                            buf.trim().to_string()
+                        } else {
+                            eprintln!(
+                                "Failed to read stdin as text.\nMake sure you are piping UTF-8 text."
+                            );
+                            process::exit(1)
+                        }
                     } else {
                         let temp_file = temp_dir().join("tweet.txt");
                         let status = utils::open_editor(&temp_file);
