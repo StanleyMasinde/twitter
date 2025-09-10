@@ -60,3 +60,9 @@ pub fn init() {
     fs::write(config_file, serialized_config).expect("Could not write to config file.");
     println!("The config file was created please fill in your credentials.")
 }
+
+pub fn validate() {
+    utils::check_permissions(&utils::get_config_dir(), true);
+    utils::check_permissions(&utils::get_config_file(), false);
+    println!("Validation complete. Please check for any warnings and address them.")
+}
