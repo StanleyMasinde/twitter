@@ -18,7 +18,7 @@ pub async fn run(port_param: Option<u16>) {
         Ok(l) => l,
         Err(error) => {
             if error.kind() == ErrorKind::PermissionDenied {
-                eprintln!("You don't have persmission to port {port}.")
+                eprintln!("You don't have permission to port {port}.")
             } else if error.kind() == ErrorKind::AddrInUse {
                 eprintln!("Port {port} is already in use.")
             } else {
