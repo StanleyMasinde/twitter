@@ -1,11 +1,3 @@
----
-name: Pull request
-about: Contribute code to the Twitter CLI
-title: ''
-labels: pr
-assignees: ''
----
-
 **Description**
 Explain what this PR changes and why. Keep it concise.
 
