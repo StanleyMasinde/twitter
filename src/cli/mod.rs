@@ -52,6 +52,10 @@ enum Commands {
         /// Show the config file.
         #[arg(long)]
         show: bool,
+
+        /// Validate config
+        #[arg(long)]
+        validate: bool,
     },
 }
 
@@ -116,13 +120,20 @@ pub async fn run() {
                 Err(err) => println!("Error:{}", err),
             }
         }
-        Commands::Config { edit, show, init } => {
+        Commands::Config {
+            edit,
+            show,
+            init,
+            validate,
+        } => {
             if edit {
                 config::edit();
             } else if show {
                 config::show();
             } else if init {
                 config::init();
+            } else if validate {
+                config::validate();
             } else {
                 Args::parse_from(["", "config", "--help"]);
             }
