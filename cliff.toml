@@ -1,5 +1,8 @@
+# git-cliff ~ configuration file with full GitHub integration
 # https://git-cliff.org/docs/configuration
+
 [changelog]
+# Template with GitHub links, author attribution, and proper formatting
 body = """
 {% if version %}\
     ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
@@ -18,11 +21,27 @@ body = """
     {% endfor %}
 {% endfor %}
 
+## Contributors
+{% set_global contributors = [] -%}
+{% for commit in commits -%}
+    {% if commit.remote.username -%}
+        {% set_global contributors = contributors | concat(with=commit.remote.username) -%}
+    {% endif -%}
+{% endfor -%}
+{% set_global unique_contributors = contributors | unique | sort -%}
+{% for contributor in unique_contributors -%}
+- [@{{ contributor }}](https://github.com/{{ contributor }})
+{% endfor -%}
+
 **Full Changelog**: <REPO>/compare/{{ previous.version }}...{{ version }}
 """
+# Remove leading and trailing whitespaces from the changelog's body.
 trim = true
+# Render body even when there are no releases to process.
 render_always = true
+# Regex postprocessors to replace placeholders with actual URLs
 postprocessors = [
+    # Replace <REPO> placeholder with your GitHub repository URL
     { pattern = '<REPO>', replace = "https://github.com/StanleyMasinde/twitter" },
 ]
 
@@ -118,5 +137,5 @@ recurse_submodules = false
 
 # GitHub-specific settings (uncomment and configure if needed)
 # [remote.github]
-owner = "StanleyMasinde"
-repo = "twitter"
+# owner = "StanleyMasinde"
+# repo = "twitter"
