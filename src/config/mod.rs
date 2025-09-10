@@ -3,6 +3,8 @@ use std::{fmt::Display, fs, process};
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 
+use crate::utils;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub consumer_key: String,
@@ -13,6 +15,7 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Self {
+        Config::validate_config();
         let config_dir = home_dir()
             .expect("Home dir not found!")
             .join(".config/twitter_cli/config.toml");
@@ -32,6 +35,11 @@ impl Config {
                 process::exit(1)
             }
         }
+    }
+
+    fn validate_config() {
+        utils::check_permissions(&utils::get_config_dir(), true);
+        utils::check_permissions(&utils::get_config_file(), false);
     }
 }
 
