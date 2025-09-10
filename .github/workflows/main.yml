@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           # Generate full changelog; git-cliff detects the latest tag context.
-          git cliff --latest --output CHANGELOG.md
+          git cliff --latest --output CHANGELOG.md >/dev/null
           {
             echo "changelog<<EOF"
             cat CHANGELOG.md
