@@ -121,9 +121,9 @@ pub async fn run() {
 
             match api_res {
                 Ok(ok) => {
-                    println!("{}", ok.content)
+                    println!("{:?}", ok.content)
                 }
-                Err(err) => println!("Error:{}", err),
+                Err(err) => println!("Error:{:?}", err.message),
             }
         }
         Commands::Config {

@@ -1,10 +1,17 @@
+use std::fmt::format;
+
 use crate::{
     api::client::{Response, TweetCreateResponse, TweetData},
     config::Config,
 };
 use oauth::{HMAC_SHA1, Token};
-use reqwest::Error;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTweetErr {
+    pub message: String,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct TweetBody {
@@ -18,7 +25,7 @@ pub struct Reply {
 }
 
 pub trait TwitterApi {
-    async fn create(&mut self) -> Result<Response, Error>;
+    async fn create(&mut self) -> Result<Response, CreateTweetErr>;
 }
 
 pub struct Tweet {
@@ -61,11 +68,11 @@ impl Tweet {
         }
     }
 
-    fn is_thread(&self, tweet: &String) -> bool {
+    fn is_thread(&self, tweet: &str) -> bool {
         tweet.lines().any(|line| line.trim() == self.separator)
     }
 
-    fn split_tweet(&self, tweet: &String, separator: &str) -> Vec<String> {
+    fn split_tweet(&self, tweet: &str, separator: &str) -> Vec<String> {
         tweet
             .lines()
             .collect::<Vec<&str>>()
@@ -74,7 +81,7 @@ impl Tweet {
             .collect()
     }
 
-    async fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, Error> {
+    async fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
         let cfg = Config::load();
         let token = Token::from_parts(
             cfg.consumer_key,
@@ -112,16 +119,32 @@ impl Tweet {
             .header(reqwest::header::AUTHORIZATION, &auth_header)
             .json(&new_tweet)
             .send()
-            .await?
-            .json::<TweetCreateResponse>()
-            .await?;
+            .await
+            .map_err(|e| CreateTweetErr {
+                message: e.to_string(),
+            })?;
+        let status = response.status();
 
-        Ok(response)
+        if status.is_success() {
+            let bytes = response.bytes().await.map_err(|err| CreateTweetErr {
+                message: err.to_string(),
+            })?;
+            let res_data: TweetCreateResponse =
+                serde_json::from_slice(&bytes).map_err(|_| CreateTweetErr {
+                    message: "Invalid response body.".into(),
+                })?;
+            Ok(res_data)
+        } else {
+            let err_data = response.text().await.map_err(|e| CreateTweetErr {
+                message: format!("{:?}", e),
+            })?;
+            Err(CreateTweetErr { message: err_data })
+        }
     }
 }
 
 impl TwitterApi for Tweet {
-    async fn create(&mut self) -> Result<Response, Error> {
+    async fn create(&mut self) -> Result<Response, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap();
         let tweet_data = TweetData {
             text: "".to_string(),
@@ -129,7 +152,7 @@ impl TwitterApi for Tweet {
             id: 0.to_string(),
         };
         let content = TweetCreateResponse { data: tweet_data };
-        let response = Response {
+        let mut response = Response {
             status: 200,
             content,
         };
@@ -138,14 +161,11 @@ impl TwitterApi for Tweet {
             let parts = self.split_tweet(&text, &self.separator);
             self.tweet_parts = parts.clone();
             for index in 0..parts.len() {
-                let res = self.send(Some(index)).await;
-
-                if let Ok(response) = res {
-                    self.previous_tweet = Some(response.data.id);
-                }
+                let res = self.send(Some(index)).await?;
             }
         } else {
-            self.send(None).await?;
+            let res = self.send(None).await?;
+            response.content = res;
         }
 
         Ok(response)
