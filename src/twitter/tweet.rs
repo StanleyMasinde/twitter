@@ -162,7 +162,9 @@ impl TwitterApi for Tweet {
             for index in 0..num_of_tweets {
                 println!("Sending tweet {}/{}", index + 1, num_of_tweets);
                 let res = self.send(Some(index)).await?;
-                self.previous_tweet = Some(res.data.id);
+                let tweet_id = &res.data.id;
+                self.previous_tweet = Some(tweet_id.to_string());
+                response.content = res
             }
         } else {
             let res = self.send(None).await?;
