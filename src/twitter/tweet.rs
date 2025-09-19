@@ -158,8 +158,9 @@ impl TwitterApi for Tweet {
         if self.is_thread(&text) {
             let parts = self.split_tweet(&text, &self.separator);
             self.tweet_parts = parts.clone();
-            for index in 0..parts.len() {
-                println!("Sending, {}", index.clone());
+            let num_of_tweets = parts.len();
+            for index in 0..num_of_tweets {
+                println!("Sending tweet {}/{}", index + 1, num_of_tweets);
                 let res = self.send(Some(index)).await?;
                 self.previous_tweet = Some(res.data.id);
             }
