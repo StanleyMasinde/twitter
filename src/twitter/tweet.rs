@@ -1,11 +1,9 @@
-use std::fmt::format;
 
+use crate::twitter::{Response, TweetCreateResponse, TweetData};
 use crate::{
-    api::client::{Response, TweetCreateResponse, TweetData},
     config::Config,
 };
 use oauth::{HMAC_SHA1, Token};
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -27,7 +25,7 @@ pub struct Reply {
 }
 
 pub trait TwitterApi {
-    async fn create(&mut self) -> Result<Response, CreateTweetErr>;
+    async fn create(&mut self) -> Result<Response::<TweetCreateResponse>, CreateTweetErr>;
 }
 
 pub struct Tweet {
@@ -142,7 +140,7 @@ impl Tweet {
 }
 
 impl TwitterApi for Tweet {
-    async fn create(&mut self) -> Result<Response, CreateTweetErr> {
+    async fn create(&mut self) -> Result<Response::<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
             text: "".to_string(),
