@@ -14,3 +14,4 @@ oauth = { version = "0.6", package = "oauth1-request" }
 dirs = "6.0.0"
 toml = "0.9.5"
 clap = { version = "4.5.46", features = ["derive"] }
+axum-macros = "0.5.0"
