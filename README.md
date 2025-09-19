@@ -107,6 +107,19 @@ curl -X POST http://localhost:3000/api/tweet \
   -d '{"text": "Building in public without the scroll trap"}'
 ```
 
+### Tweet a thread
+```bash
+twitter tweet
+```
+This will launch your default terminal editor. Separate your threads with --- like this.
+```txt
+This is a very long thread. This being the intro.
+---
+The three dashes indicate the boundary between tweets so this will be tweet 2.
+---
+This will be tweet 3
+```
+
 **API Response:**
 ```json
 {
