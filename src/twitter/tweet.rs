@@ -15,7 +15,9 @@ pub struct CreateTweetErr {
 
 #[derive(Serialize, Deserialize)]
 pub struct TweetBody {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reply: Option<Reply>,
 }
 
@@ -38,18 +40,14 @@ pub struct Tweet {
 
 impl Default for Tweet {
     fn default() -> Self {
-        let reply = Reply {
-            in_reply_to_tweet_id: 0.to_string(),
-        };
-
         let payload = TweetBody {
             text: Some(String::new()),
-            reply: Some(reply),
+            reply: None,
         };
 
         Self {
             client: Default::default(),
-            previous_tweet: Default::default(),
+            previous_tweet: None,
             separator: Default::default(),
             payload,
             tweet_parts: Default::default(),
@@ -161,7 +159,9 @@ impl TwitterApi for Tweet {
             let parts = self.split_tweet(&text, &self.separator);
             self.tweet_parts = parts.clone();
             for index in 0..parts.len() {
+                println!("Sending, {}", index.clone());
                 let res = self.send(Some(index)).await?;
+                self.previous_tweet = Some(res.data.id);
             }
         } else {
             let res = self.send(None).await?;
