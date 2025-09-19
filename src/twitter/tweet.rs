@@ -96,7 +96,7 @@ impl Tweet {
             });
         }
 
-        let mut tweet_text: String = self.payload.text.clone().unwrap();
+        let mut tweet_text: String = self.payload.text.clone().unwrap_or_default();
 
         if let Some(current_index) = index {
             tweet_text = self
@@ -143,7 +143,7 @@ impl Tweet {
 
 impl TwitterApi for Tweet {
     async fn create(&mut self) -> Result<Response, CreateTweetErr> {
-        let text = self.payload.text.clone().unwrap();
+        let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
             text: "".to_string(),
             edit_history_tweet_ids: vec![],
@@ -164,7 +164,7 @@ impl TwitterApi for Tweet {
                 let res = self.send(Some(index)).await?;
                 let tweet_id = &res.data.id;
                 self.previous_tweet = Some(tweet_id.to_string());
-                response.content = res
+                response.content = res;
             }
         } else {
             let res = self.send(None).await?;
@@ -210,6 +210,6 @@ mod tests {
 
         let tweet = "This is a normal tweet.".to_string();
 
-        assert!(!tweet_2.is_thread(&tweet))
+        assert!(!tweet_2.is_thread(&tweet));
     }
 }

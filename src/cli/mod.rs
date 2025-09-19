@@ -109,12 +109,9 @@ pub async fn run() {
                 }
             };
 
-            let reply = Reply {
-                in_reply_to_tweet_id: "0".to_string(),
-            };
             let payload = TweetBody {
                 text: Some(tweet_body),
-                reply: Some(reply),
+                reply: None,
             };
             let mut tweet = tweet::Tweet::new(client, payload);
             let api_res = tweet.create().await;
