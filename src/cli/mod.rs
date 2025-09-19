@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 
 use crate::{
     server::{self},
-    twitter::tweet::{self, Reply, TweetBody, TwitterApi},
+    twitter::tweet::{self, TweetBody, TwitterApi},
     utils,
 };
 
