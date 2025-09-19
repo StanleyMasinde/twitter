@@ -1,3 +1,4 @@
 /target
 verifier_secret.txt
 auth_code.txt
+.DS_Store

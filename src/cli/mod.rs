@@ -10,9 +10,8 @@ use std::{
 use clap::{Parser, Subcommand};
 
 use crate::{
-    api::client::{ApiClient, HttpClient},
-    server::{self, routes::api::CreateTweet},
-    twitter::tweet,
+    server::{self},
+    twitter::tweet::{self, TweetBody, TwitterApi},
     utils,
 };
 
@@ -65,7 +64,7 @@ pub async fn run() {
     match args.command {
         Commands::Serve { port } => server::run(port).await,
         Commands::Tweet { body } => {
-            let client = ApiClient::new();
+            let client = reqwest::Client::new();
 
             let tweet_body = match body {
                 Some(tweet) => tweet,
@@ -110,14 +109,18 @@ pub async fn run() {
                 }
             };
 
-            let payload = CreateTweet { text: tweet_body };
-            let api_res = tweet::create(client, payload).await;
+            let payload = TweetBody {
+                text: Some(tweet_body),
+                reply: None,
+            };
+            let mut tweet = tweet::Tweet::new(client, payload);
+            let api_res = tweet.create().await;
 
             match api_res {
                 Ok(ok) => {
-                    println!("{}", ok.content)
+                    println!("{:?}", ok.content)
                 }
-                Err(err) => println!("Error:{}", err),
+                Err(err) => println!("Error:{:?}", err.message),
             }
         }
         Commands::Config {
