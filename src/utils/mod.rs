@@ -35,11 +35,11 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
         let expected = if is_dir { 0o700 } else { 0o600 };
 
         if mode != expected {
-            eprintln!(
+            println!(
                 "⚠️  Permissions for {:?} are {:o}, expected {:o}",
                 path, mode, expected
             );
-            eprintln!("Run chmod {:o} {:?}", expected, path)
+            println!("Run chmod {:o} {:?}", expected, path)
         }
     }
 }
