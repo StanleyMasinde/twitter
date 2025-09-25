@@ -30,6 +30,27 @@ sudo mv twitter /usr/local/bin/
 sudo chmod +x /usr/local/bin/twitter
 ```
 
+### Windows x64 Via powershell
+```powershell
+# Download and extract
+Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x64.zip -OutFile twitter.zip
+Expand-Archive -Force twitter.zip -DestinationPath .
+
+# Move exe to a user bin directory
+$dest = "$env:USERPROFILE\bin"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Move-Item -Force ".\twitter.exe" "$dest\twitter.exe"
+
+# Add bin directory to PATH (persistent, per-user)
+$old = [Environment]::GetEnvironmentVariable("Path","User")
+if ($old -notlike "*$dest*") {
+  [Environment]::SetEnvironmentVariable("Path","$old;$dest","User")
+}
+
+# Make it available in this session
+$env:Path += ";$dest"
+```
+
 ## Configuration
 1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
 2. Create a new app and get your API credentials
