@@ -1,6 +1,5 @@
 use std::{
     env, fs,
-    os::unix::fs::PermissionsExt,
     path::PathBuf,
     process::{Command, ExitStatus},
 };
@@ -32,6 +31,7 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
     if let Ok(metadata) = fs::metadata(path) {
         #[cfg(unix)]
         {
+            use std::os::unix::fs::PermissionsExt;
             let mode = metadata.permissions().mode() & 0o777;
 
             let expected = if is_dir { 0o700 } else { 0o600 };
