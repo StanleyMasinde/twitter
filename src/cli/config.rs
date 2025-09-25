@@ -32,14 +32,18 @@ pub fn init() {
     match create_dir {
         Ok(_) => {
             println!("Created home config dir.");
-            let perms = fs::Permissions::from_mode(0o700);
-            if fs::set_permissions(&config_dir, perms).is_ok() {
-                println!("Config dir permissions set to 700")
-            } else {
-                eprintln!(
-                    "Failed to set permissions\nPlease run chmod 700 {}",
-                    config_dir.to_str().unwrap()
-                )
+
+            #[cfg(unix)]
+            {
+                let perms = fs::Permissions::from_mode(0o700);
+                if fs::set_permissions(&config_dir, perms).is_ok() {
+                    println!("Config dir permissions set to 700")
+                } else {
+                    eprintln!(
+                        "Failed to set permissions\nPlease run chmod 700 {}",
+                        config_dir.to_str().unwrap()
+                    )
+                }
             }
         }
         Err(err) => match err.kind() {
@@ -59,14 +63,17 @@ pub fn init() {
 
     let config_file = utils::get_config_file();
 
-    let file_perms = fs::Permissions::from_mode(0o600);
-    if fs::set_permissions(&config_file, file_perms).is_ok() {
-        println!("Config file permissions set to 600")
-    } else {
-        eprintln!(
-            "Failed to set permissions for config file\nPlease run chmod 600 {}",
-            config_file.to_str().unwrap()
-        )
+    #[cfg(unix)]
+    {
+        let file_perms = fs::Permissions::from_mode(0o600);
+        if fs::set_permissions(&config_file, file_perms).is_ok() {
+            println!("Config file permissions set to 600")
+        } else {
+            eprintln!(
+                "Failed to set permissions for config file\nPlease run chmod 600 {}",
+                config_file.to_str().unwrap()
+            )
+        }
     }
 
     let config = Config {
