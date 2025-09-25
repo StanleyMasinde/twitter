@@ -1,4 +1,4 @@
-use std::{fs, io::ErrorKind, os::unix::fs::PermissionsExt, process};
+use std::{fs, io::ErrorKind, process};
 
 use crate::{config::Config, utils};
 
@@ -35,6 +35,7 @@ pub fn init() {
 
             #[cfg(unix)]
             {
+                use std::os::unix::fs::PermissionsExt;
                 let perms = fs::Permissions::from_mode(0o700);
                 if fs::set_permissions(&config_dir, perms).is_ok() {
                     println!("Config dir permissions set to 700")
