@@ -66,6 +66,7 @@ pub fn init() {
 
     #[cfg(unix)]
     {
+        use std::os::unix::fs::PermissionsExt;
         let file_perms = fs::Permissions::from_mode(0o600);
         if fs::set_permissions(&config_file, file_perms).is_ok() {
             println!("Config file permissions set to 600")
