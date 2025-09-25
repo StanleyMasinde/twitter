@@ -30,16 +30,24 @@ pub fn open_editor(file: &PathBuf) -> ExitStatus {
 
 pub fn check_permissions(path: &PathBuf, is_dir: bool) {
     if let Ok(metadata) = fs::metadata(path) {
-        let mode = metadata.permissions().mode() & 0o777;
+        #[cfg(unix)]
+        {
+            let mode = metadata.permissions().mode() & 0o777;
 
-        let expected = if is_dir { 0o700 } else { 0o600 };
+            let expected = if is_dir { 0o700 } else { 0o600 };
 
-        if mode != expected {
-            println!(
-                "⚠️  Permissions for {:?} are {:o}, expected {:o}",
-                path, mode, expected
-            );
-            println!("Run chmod {:o} {:?}", expected, path)
+            if mode != expected {
+                println!(
+                    "⚠️  Permissions for {:?} are {:o}, expected {:o}",
+                    path, mode, expected
+                );
+                println!("Run chmod {:o} {:?}", expected, path)
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            println!("Windows does not support permissions.");
         }
     }
 }
