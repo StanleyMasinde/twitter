@@ -67,6 +67,10 @@ jobs:
             os: macos-14
             name: darwin-arm64
             archive_ext: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x64
+            archive_ext: zip
 
     runs-on: ${{ matrix.os }}
 
@@ -101,19 +105,25 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/}"
           TARGET_DIR="target/${{ matrix.target }}/release"
-          BIN="${TARGET_DIR}/${BINARY_NAME}"
 
-          # macOS/Linux: no .exe
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+          BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
+          else
+          BIN="${TARGET_DIR}/${BINARY_NAME}"
+          fi
+
           test -f "$BIN" || { echo "Binary missing: $BIN"; exit 1; }
 
-          # Name: twitter-<platform>.tar.gz
           ARCHIVE="${BINARY_NAME}-${{ matrix.name }}.${{ matrix.archive_ext }}"
-
-          # Create a temporary staging dir to control archive layout
           STAGE="$(mktemp -d)"
-          install -m 0755 "$BIN" "$STAGE/${BINARY_NAME}"
+          install -m 0755 "$BIN" "$STAGE/$(basename "$BIN")"
 
-          tar -C "$STAGE" -czf "$ARCHIVE" .
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            powershell -Command "Compress-Archive -Path $STAGE/* -DestinationPath $ARCHIVE"
+          else
+            tar -C "$STAGE" -czf "$ARCHIVE" .
+          fi
+
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
 
       - name: Upload packaged artifact
@@ -210,6 +220,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             artifacts/**/*.tar.gz
-            artifacts/**/*.tar.gz.asc
-            artifacts/SHA256SUMS
-            artifacts/SHA256SUMS.asc
+            artifacts/**/*.zip
