@@ -107,9 +107,9 @@ jobs:
           TARGET_DIR="target/${{ matrix.target }}/release"
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-          BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
+           BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
           else
-            BIN="${TARGET_DIR}/${BINARY_NAME}"
+          BIN="${TARGET_DIR}/${BINARY_NAME}"
           fi
 
           test -f "$BIN" || { echo "Binary missing: $BIN"; exit 1; }
@@ -119,9 +119,9 @@ jobs:
           install -m 0755 "$BIN" "$STAGE/$(basename "$BIN")"
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            (cd "$STAGE" && zip -r "../$ARCHIVE" .)
+           7z a "$ARCHIVE" "$STAGE"/*
           else
-            tar -C "$STAGE" -czf "$ARCHIVE" .
+          tar -C "$STAGE" -czf "$ARCHIVE" .
           fi
 
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
