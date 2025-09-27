@@ -16,6 +16,7 @@ pub struct Config {
 impl Config {
     pub fn load() -> Self {
         Config::validate_config();
+        let binary_name = env!("CARGO_BIN_NAME");
         let config_dir = home_dir()
             .expect("Home dir not found!")
             .join(".config/twitter_cli/config.toml");
@@ -23,7 +24,7 @@ impl Config {
         let data = match fs::read_to_string(config_dir) {
             Ok(data) => data,
             Err(_) => {
-                eprintln!("Failed to read the config file.\nPlease run twitter config --init");
+                eprintln!("Failed to read the config file.\nPlease run {binary_name} config --init");
                 process::exit(1)
             }
         };
@@ -31,7 +32,7 @@ impl Config {
         match toml::from_str::<Self>(&data) {
             Ok(cfg) => cfg,
             Err(_) => {
-                eprintln!("The config file is malformed. Please run twitter config --init");
+                eprintln!("The config file is malformed. Please run {binary_name} config --init");
                 process::exit(1)
             }
         }
