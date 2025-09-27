@@ -120,7 +120,7 @@ pub async fn run() {
                 Ok(ok) => {
                     println!("{:?}", ok.content)
                 }
-                Err(err) => println!("Error:{:?}", err.message),
+                Err(err) => println!("{}", err.message),
             }
         }
         Commands::Config {
