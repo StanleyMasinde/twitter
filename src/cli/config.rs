@@ -13,15 +13,16 @@ pub fn edit() {
 }
 
 pub fn show() {
+    let binary_name = env!("CARGO_BIN_NAME");
     let config_file = utils::get_config_file();
     if let Ok(file_content) = fs::read_to_string(config_file) {
         if let Ok(config) = toml::from_str::<Config>(&file_content) {
             println!("{}", config);
         } else {
-            eprintln!("Invalid config format.\nPlease run twitter config --init")
+            eprintln!("Invalid config format.\nPlease run {binary_name} config --init")
         }
     } else {
-        eprintln!("Failed to read to config file.\nPlease run twitter config --init")
+        eprintln!("Failed to read to config file.\nPlease run {binary_name} config --init")
     }
 }
 
