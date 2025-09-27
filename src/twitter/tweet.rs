@@ -1,8 +1,5 @@
-
+use crate::config::Config;
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
-use crate::{
-    config::Config,
-};
 use oauth::{HMAC_SHA1, Token};
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +14,8 @@ pub struct TweetBody {
     pub text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reply: Option<Reply>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media: Option<Media>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,8 +23,13 @@ pub struct Reply {
     pub in_reply_to_tweet_id: String,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Media {
+    pub media_ids: Vec<String>,
+}
+
 pub trait TwitterApi {
-    async fn create(&mut self) -> Result<Response::<TweetCreateResponse>, CreateTweetErr>;
+    async fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr>;
 }
 
 pub struct Tweet {
@@ -41,6 +45,7 @@ impl Default for Tweet {
         let payload = TweetBody {
             text: Some(String::new()),
             reply: None,
+            media: None,
         };
 
         Self {
@@ -87,6 +92,7 @@ impl Tweet {
         );
         let url = "https://api.twitter.com/2/tweets";
         let auth_header = oauth::post(url, &(), &token, HMAC_SHA1);
+        let media = self.payload.media.clone();
         let mut reply = None;
         if self.previous_tweet.is_some() {
             reply = Some(Reply {
@@ -107,6 +113,7 @@ impl Tweet {
         let new_tweet = TweetBody {
             text: Some(tweet_text),
             reply,
+            media,
         };
 
         let response = self
@@ -140,7 +147,7 @@ impl Tweet {
 }
 
 impl TwitterApi for Tweet {
-    async fn create(&mut self) -> Result<Response::<TweetCreateResponse>, CreateTweetErr> {
+    async fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
             text: "".to_string(),

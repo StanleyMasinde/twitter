@@ -3,6 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 pub mod tweet;
+pub mod media;
 
 pub struct Response<T> {
     pub status: u16,
