@@ -4,6 +4,7 @@ use std::{
     env::temp_dir,
     fs,
     io::{self, IsTerminal, Read},
+    path::PathBuf,
     process,
 };
 
@@ -11,7 +12,10 @@ use clap::{Parser, Subcommand};
 
 use crate::{
     server::{self},
-    twitter::tweet::{self, TweetBody, TwitterApi},
+    twitter::{
+        self,
+        tweet::{self, Media, TweetBody, TwitterApi},
+    },
     utils,
 };
 
@@ -36,6 +40,10 @@ enum Commands {
         /// The body of the tweet
         #[arg(long, short, name = "body")]
         body: Option<String>,
+
+        /// An image to attach to the tweet
+        #[arg(long, short, name = "image")]
+        image: Option<PathBuf>,
     },
 
     /// Manage config
@@ -63,8 +71,16 @@ pub async fn run() {
 
     match args.command {
         Commands::Serve { port } => server::run(port).await,
-        Commands::Tweet { body } => {
+        Commands::Tweet { body, image } => {
             let client = reqwest::Client::new();
+            let mut media_id: Option<String> = None;
+
+            if let Some(image_path) = image {
+                let upload_result = twitter::media::upload(client.clone(), image_path)
+                    .await
+                    .unwrap();
+                media_id = Some(upload_result);
+            }
 
             let tweet_body = match body {
                 Some(tweet) => tweet,
@@ -109,10 +125,18 @@ pub async fn run() {
                 }
             };
 
-            let payload = TweetBody {
+            let mut payload = TweetBody {
                 text: Some(tweet_body),
                 reply: None,
+                media: None,
             };
+
+            if let Some(media) = media_id {
+                let media_body = Media {
+                    media_ids: [media].to_vec(),
+                };
+                payload.media = Some(media_body);
+            }
             let mut tweet = tweet::Tweet::new(client, payload);
             let api_res = tweet.create().await;
 
