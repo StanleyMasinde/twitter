@@ -14,17 +14,6 @@ struct MediaUploadResponse {
 #[derive(Debug, Deserialize)]
 struct Data {
     id: String,
-    media_key: String,
-    size: u64,
-    expires_after_secs: u64,
-    image: Image,
-}
-
-#[derive(Debug, Deserialize)]
-struct Image {
-    image_type: String,
-    w: u32,
-    h: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,15 +51,22 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
         .map_err(|err| UploadMediaError {
             message: err.to_string(),
         })?;
+    let status = response.status();
 
     let response_text = response.text().await.map_err(|err| UploadMediaError {
         message: err.to_string(),
     })?;
 
-    let media_upload_res: MediaUploadResponse =
-        serde_json::from_str(&response_text).map_err(|err| UploadMediaError {
-            message: err.to_string(),
-        })?;
+    if status.is_success() {
+        let media_upload_res: MediaUploadResponse =
+            serde_json::from_str(&response_text).map_err(|err| UploadMediaError {
+                message: err.to_string(),
+            })?;
 
-    Ok(media_upload_res.data.id)
+        Ok(media_upload_res.data.id)
+    } else {
+        Err(UploadMediaError {
+            message: "Please provive a valid image file. Videos are not supported".to_string(),
+        })
+    }
 }
