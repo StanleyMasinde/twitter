@@ -32,10 +32,20 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
         cfg.access_secret,
     );
     let auth_header = oauth::post(upload_url, &(), &token, HMAC_SHA1);
+    let file_kind = infer::get_from_path(&path);
+
+    let media_type = match file_kind {
+        Ok(kind) => kind.unwrap().mime_type(),
+        Err(_) => {
+            return Err(UploadMediaError {
+                message: "Could not get the file type.".to_string(),
+            });
+        }
+    };
 
     let form = multipart::Form::new()
         .text("media_category", "tweet_image")
-        .text("media_type", "image/png")
+        .text("media_type", media_type)
         .file("media", path)
         .await
         .map_err(|err| UploadMediaError {
