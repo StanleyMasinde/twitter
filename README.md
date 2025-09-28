@@ -99,19 +99,30 @@ If you face a 403 error when tweeting:
 ## Usage
 
 ### Tweet in CLI Mode
+#### Tweet
 ```bash
-# Tweet
 twitter tweet --body "Building something cool today"
+```
 
-# Piped input
+#### Piped input
+```bash
 echo "I love CLIs" | twitter tweet
+```
 
-# From text files
+
+##### From text files
+```bash
 cat drafts.txt | twitter tweet
-
-# Edit tweet in an editor
-# Omit --body and it will launch your default terminal editor. Like Vim or Nano.
+```
+#### Edit tweet in an editor
+Omit --body and it will launch your default terminal editor. Like Vim or Nano.
+```bash
 twitter tweet
+```
+
+#### Add Media
+```bash
+twitter tweet --image ~/Downloads/image.png
 ```
 
 ### Tweet in Server Mode
