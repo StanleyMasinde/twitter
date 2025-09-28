@@ -165,6 +165,10 @@ impl TwitterApi for Tweet {
             self.tweet_parts = parts.clone();
             let num_of_tweets = parts.len();
             for index in 0..num_of_tweets {
+                // Only attach media to the first tweet
+                if index > 0 {
+                    self.payload.media = None
+                }
                 println!("Sending tweet {}/{}", index + 1, num_of_tweets);
                 let res = self.send(Some(index)).await?;
                 let tweet_id = &res.data.id;
