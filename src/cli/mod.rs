@@ -76,10 +76,14 @@ pub async fn run() {
             let mut media_id: Option<String> = None;
 
             if let Some(image_path) = image {
-                let upload_result = twitter::media::upload(client.clone(), image_path)
-                    .await
-                    .unwrap();
-                media_id = Some(upload_result);
+                let upload_result = twitter::media::upload(client.clone(), image_path).await;
+                media_id = match upload_result {
+                    Ok(media) => Some(media),
+                    Err(err) => {
+                        eprintln!("{}", err.message);
+                        process::exit(1);
+                    }
+                };
             }
 
             let tweet_body = match body {
