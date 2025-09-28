@@ -72,7 +72,5 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
             message: err.to_string(),
         })?;
 
-    println!("{:?}", response_text);
-
     Ok(media_upload_res.data.id)
 }
