@@ -11,23 +11,17 @@ Download the appropriate binary from [releases](https://github.com/StanleyMasind
 
 ### Linux (x64)
 ```bash
-wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x64.tar.gz && tar -xzf twitter-linux-x64.tar.gz && rm twitter-linux-x64.tar.gz
-sudo mv twitter /usr/local/bin/
-sudo chmod +x /usr/local/bin/twitter
+wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x64.tar.gz && tar -xzf twitter-linux-x64.tar.gz && rm twitter-linux-x64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### macOS (Intel)
 ```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x64.tar.gz | tar -xz
-sudo mv twitter /usr/local/bin/
-sudo chmod +x /usr/local/bin/twitter
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### macOS (Apple Silicon)
 ```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-arm64.tar.gz | tar -xz
-sudo mv twitter /usr/local/bin/
-sudo chmod +x /usr/local/bin/twitter
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-arm64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### Windows x64 Via powershell
