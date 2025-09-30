@@ -9,9 +9,14 @@ Simple CLI for posting to Twitter using their API v2. No authentication flow - j
 ## Installation
 Download the appropriate binary from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
-### Linux (x64)
+### Linux (Static x64)
 ```bash
-wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x64.tar.gz && tar -xzf twitter-linux-x64.tar.gz && rm twitter-linux-x64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
+wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-static-x64.tar.gz && tar -xzf twitter-linux-static-x64.tar.gz && rm twitter-linux-static-x64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
+```
+
+### Linux (GNU x64)
+```bash
+wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-gnu.tar.gz && tar -xzf twitter-linux-gnu.tar.gz && rm twitter-linux-gnu.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### macOS (Intel)
