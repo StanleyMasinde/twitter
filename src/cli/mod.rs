@@ -16,7 +16,7 @@ use crate::{
         self,
         tweet::{self, Media, TweetBody, TwitterApi},
     },
-    utils,
+    usage, utils,
 };
 
 #[derive(Parser, Debug)]
@@ -64,6 +64,9 @@ enum Commands {
         #[arg(long)]
         validate: bool,
     },
+
+    /// API usage
+    Usage {},
 }
 
 pub async fn run() {
@@ -169,5 +172,6 @@ pub async fn run() {
                 Args::parse_from(["", "config", "--help"]);
             }
         }
+        Commands::Usage {} => usage::show().await,
     }
 }

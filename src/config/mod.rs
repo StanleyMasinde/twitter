@@ -11,6 +11,7 @@ pub struct Config {
     pub consumer_secret: String,
     pub access_token: String,
     pub access_secret: String,
+    pub bearer_token: String,
 }
 
 impl Config {
@@ -24,7 +25,9 @@ impl Config {
         let data = match fs::read_to_string(config_dir) {
             Ok(data) => data,
             Err(_) => {
-                eprintln!("Failed to read the config file.\nPlease run {binary_name} config --init");
+                eprintln!(
+                    "Failed to read the config file.\nPlease run {binary_name} config --init"
+                );
                 process::exit(1)
             }
         };
