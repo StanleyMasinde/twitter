@@ -80,6 +80,7 @@ consumer_key = "your_consumer_key"
 consumer_secret = "your_consumer_secret"
 access_token = "your_access_token"
 access_secret = "your_access_secret"
+bearer_token = "your_bearer_token"
 ```
 
 ### Manual Configuration
@@ -165,6 +166,13 @@ This will be tweet 3
   "text": "Building in public without the scroll trap"
 }
 ```
+
+## Show usage
+You can show the API usage via the usage subcommand.
+```shell
+twitter usage
+```
+The above command will show the API usage.
 
 ## Future Plans
 - Thread support via stdin piping
