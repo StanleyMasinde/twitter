@@ -84,6 +84,7 @@ pub fn init() {
         consumer_secret: "your_consumer_secret".to_string(),
         access_token: "your_access_token".to_string(),
         access_secret: "your_access_secret".to_string(),
+        bearer_token: "your_bearer_token".to_string(),
     };
 
     let serialized_config = match toml::to_string(&config) {
