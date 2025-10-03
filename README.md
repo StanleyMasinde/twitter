@@ -7,7 +7,13 @@ I love creating content on Twitter but twitter.com leads to doomscrolling. This 
 Simple CLI for posting to Twitter using their API v2. No authentication flow - just configure once and tweet.
 
 ## Installation
-Download the appropriate binary from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
+### ArchLinux
+ArchLinux users can install from the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) with yay:
+```bash
+yay -S twitter-cli
+```
+
+You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
 ### Linux (Static x64)
 ```bash
