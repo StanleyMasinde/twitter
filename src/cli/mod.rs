@@ -46,7 +46,7 @@ enum Commands {
         image: Option<PathBuf>,
 
         /// Launch the editor
-        #[arg[long, short, name = "editor"]]
+        #[arg(long, short, name = "editor")]
         editor: bool,
     },
 
