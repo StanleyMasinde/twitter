@@ -11,7 +11,7 @@ use std::{
 use clap::{Parser, Subcommand};
 
 use crate::{
-    server::{self},
+    server,
     twitter::{
         self,
         tweet::{self, Media, TweetBody, TwitterApi},
