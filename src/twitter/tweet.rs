@@ -29,7 +29,9 @@ pub struct Media {
 }
 
 pub trait TwitterApi {
-    async fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr>;
+    fn create(
+        &mut self,
+    ) -> impl Future<Output = Result<Response<TweetCreateResponse>, CreateTweetErr>>;
 }
 
 pub struct Tweet {
