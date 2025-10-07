@@ -23,6 +23,7 @@ pub struct UploadMediaError {
 
 pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, UploadMediaError> {
     let upload_url = "https://api.x.com/2/media/upload";
+    println!("> Uploading image.");
 
     let cfg = Config::load();
     let token = Token::from_parts(
@@ -72,6 +73,8 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
             serde_json::from_str(&response_text).map_err(|err| UploadMediaError {
                 message: err.to_string(),
             })?;
+
+        println!("> Image uploaded to Twitter.");
 
         Ok(media_upload_res.data.id)
     } else {
