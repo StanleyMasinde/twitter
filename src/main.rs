@@ -1,7 +1,7 @@
 pub mod cli;
 pub mod config;
 pub mod server;
-pub(crate) mod twitter;
+pub mod twitter;
 pub mod usage;
 pub mod utils;
 
