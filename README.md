@@ -15,11 +15,6 @@ yay -S twitter-cli
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
-### Linux (Static x64)
-```bash
-wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-static-x64.tar.gz && tar -xzf twitter-linux-static-x64.tar.gz && rm twitter-linux-static-x64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
-```
-
 ### Linux (GNU x64)
 ```bash
 wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-gnu.tar.gz && tar -xzf twitter-linux-gnu.tar.gz && rm twitter-linux-gnu.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
