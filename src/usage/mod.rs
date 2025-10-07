@@ -18,7 +18,7 @@ impl Display for OkResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Project usage: {}/{}",
+            "Daily project usage: {}/{}",
             self.data.project_usage, self.data.project_cap
         )
     }
