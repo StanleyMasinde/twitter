@@ -44,6 +44,10 @@ enum Commands {
         /// An image to attach to the tweet
         #[arg(long, short, name = "image")]
         image: Option<PathBuf>,
+
+        /// Launch the editor
+        #[arg[long, short, name = "editor"]]
+        editor: bool,
     },
 
     /// Manage config
@@ -74,7 +78,11 @@ pub async fn run() {
 
     match args.command {
         Commands::Serve { port } => server::run(port).await,
-        Commands::Tweet { body, image } => {
+        Commands::Tweet {
+            body,
+            image,
+            editor,
+        } => {
             let client = reqwest::Client::new();
             let mut media_id: Option<String> = None;
 
@@ -89,22 +97,22 @@ pub async fn run() {
                 };
             }
 
-            let tweet_body = match body {
-                Some(tweet) => tweet,
+            let tweet_body: Option<String> = match body {
+                Some(tweet) => Some(tweet),
                 None => {
                     if !io::stdin().is_terminal() {
                         let mut buf = String::new();
                         let read_stdin_string = io::stdin().read_to_string(&mut buf);
 
                         if read_stdin_string.is_ok() {
-                            buf.trim().to_string()
+                            Some(buf.trim().to_string())
                         } else {
                             eprintln!(
                                 "Failed to read stdin as text.\nMake sure you are piping UTF-8 text."
                             );
                             process::exit(1)
                         }
-                    } else {
+                    } else if editor {
                         let temp_file = temp_dir().join("tweet.txt");
                         let status = utils::open_editor(&temp_file);
 
@@ -112,7 +120,7 @@ pub async fn run() {
                             match fs::read_to_string(&temp_file) {
                                 Ok(tweet) => {
                                     let _ = fs::remove_file(temp_file);
-                                    tweet
+                                    Some(tweet)
                                 }
                                 Err(_) => {
                                     eprintln!("Failed to read the tweet.");
@@ -122,12 +130,14 @@ pub async fn run() {
                         } else {
                             process::exit(1)
                         }
+                    } else {
+                        None
                     }
                 }
             };
 
             let mut payload = TweetBody {
-                text: Some(tweet_body),
+                text: tweet_body,
                 reply: None,
                 media: None,
             };
