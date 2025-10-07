@@ -112,13 +112,7 @@ pub async fn run() {
                             match fs::read_to_string(&temp_file) {
                                 Ok(tweet) => {
                                     let _ = fs::remove_file(temp_file);
-
-                                    if tweet.is_empty() {
-                                        println!("Could not find the Tweet text. Exiting.");
-                                        process::exit(0);
-                                    } else {
-                                        tweet
-                                    }
+                                    tweet
                                 }
                                 Err(_) => {
                                     eprintln!("Failed to read the tweet.");
@@ -149,7 +143,7 @@ pub async fn run() {
 
             match api_res {
                 Ok(ok) => {
-                    println!("{:?}", ok.content)
+                    println!("{}", ok.content)
                 }
                 Err(err) => println!("{}", err.message),
             }
