@@ -3,12 +3,16 @@ use std::{
     env,
     process::{self, Command},
 };
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+};
 
 pub async fn run() {
     let binary_name = "twitter";
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
+    let temp_dir = env::temp_dir();
 
     let (os_name, ext) = match os {
         "macos" => ("darwin", "tar.gz"),
@@ -30,7 +34,8 @@ pub async fn run() {
         binary_name, os_name, arch, ext
     );
 
-    let archive_name = format!("{}.{}", binary_name, ext);
+    let archive_name = temp_dir.join(format!("{}.{}", binary_name, ext));
+    println!("{}", archive_name.display());
 
     let mut stream = match reqwest::get(update_url).await {
         Ok(res) => res.bytes_stream(),
@@ -66,11 +71,13 @@ pub async fn run() {
                 "-Command",
                 &format!(
                     "Expand-Archive -Path {} -DestinationPath . -Force",
-                    archive_name
+                    archive_name.display()
                 ),
             ])
             .status(),
-        _ => Command::new("tar").args(["-xzf", &archive_name]).status(),
+        _ => Command::new("tar")
+            .args(["-xzf", &archive_name.display().to_string()])
+            .status(),
     };
 
     if extract_status.is_err() {
@@ -95,6 +102,9 @@ pub async fn run() {
             process::exit(1)
         }
     };
+
+    println!("> Cleaning up");
+    let _ = fs::remove_file(archive_name).await;
 
     let stdout = output.stdout;
     let output_from_string = String::from_utf8_lossy(&stdout).trim().to_string();
