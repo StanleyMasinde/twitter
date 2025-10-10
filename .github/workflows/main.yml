@@ -60,11 +60,6 @@ jobs:
               name: linux-x86_64
               archive_ext: tar.gz
 
-            - target: aarch64-linux-android
-              os: ubuntu-latest
-              name: android-aarch64
-              archive_ext: tar.gz
-
             - target: x86_64-apple-darwin
               os: macos-13
               name: darwin-x86_64
