@@ -1,11 +1,38 @@
 use futures_util::StreamExt;
-use std::process::{self, Command};
+use std::{
+    env,
+    process::{self, Command},
+};
 use tokio::{fs::File, io::AsyncWriteExt};
 
 pub async fn run() {
-    let update_url = "https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-arm64.tar.gz";
-    let archive_name = "twitter.tar.gz";
     let binary_name = "twitter";
+    let os = env::consts::OS;
+    let arch = env::consts::ARCH;
+
+    let (os_name, ext) = match os {
+        "macos" => ("darwin", "tar.gz"),
+        "linux" => ("linux", "tar.gz"),
+        "windows" => ("windows", "zip"),
+        other => {
+            eprintln!("Unsupported OS: {}", other);
+            process::exit(1);
+        }
+    };
+
+    let arch = match arch {
+        "aarch64" => "arm64",
+        _ => "x86_64",
+    };
+
+    let update_url = format!(
+        "https://github.com/StanleyMasinde/twitter/releases/latest/download/{}-{}-{}.{}",
+        binary_name, os_name, arch, ext
+    );
+
+    println!("{}", update_url);
+
+    let archive_name = format!("{}.{}", binary_name, ext);
 
     let mut stream = match reqwest::get(update_url).await {
         Ok(res) => res.bytes_stream(),
@@ -15,7 +42,7 @@ pub async fn run() {
         }
     };
 
-    let mut new_file = match File::create(archive_name).await {
+    let mut new_file = match File::create(&archive_name).await {
         Ok(file) => file,
         Err(err) => {
             eprintln!("Failed to create temp file: {}", err);
@@ -35,7 +62,19 @@ pub async fn run() {
         let _ = new_file.write_all(&bytes).await;
     }
 
-    let extract_status = Command::new("tar").args(["-xzf", archive_name]).status();
+    let extract_status = match os {
+        "windows" => Command::new("powershell")
+            .args([
+                "-Command",
+                &format!(
+                    "Expand-Archive -Path {} -DestinationPath . -Force",
+                    archive_name
+                ),
+            ])
+            .status(),
+        _ => Command::new("tar").args(["-xzf", &archive_name]).status(),
+    };
+
     if extract_status.is_err() {
         eprintln!("Failed to extract the update file.");
         process::exit(1)
