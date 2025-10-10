@@ -51,6 +51,9 @@ if ($old -notlike "*$dest*") {
 $env:Path += ";$dest"
 ```
 
+## Updating 
+Twitter CLI can self update. To do that, just run `twitter update`  and it will download the latest version.
+
 ## Configuration
 1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
 2. Create a new app and get your API credentials
