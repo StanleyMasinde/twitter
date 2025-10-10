@@ -49,7 +49,6 @@ pub async fn run() {
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(0);
-    let mut downloaded_size: u64 = 0;
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(
@@ -84,7 +83,6 @@ pub async fn run() {
             }
         };
 
-        downloaded_size += bytes.len() as u64;
         pb.inc(bytes.len() as u64);
 
         let _ = new_file.write_all(&bytes).await;
