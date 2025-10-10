@@ -61,5 +61,5 @@ pub async fn run() {
 
     let stdout = output.stdout;
     let output_from_string = String::from_utf8_lossy(&stdout).trim().to_string();
-    println!("Updated to version: v{}", output_from_string)
+    println!("Updated to version: {}", output_from_string)
 }
