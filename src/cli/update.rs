@@ -26,11 +26,6 @@ pub async fn run() {
         }
     };
 
-    let arch = match arch {
-        "aarch64" => "arm64",
-        _ => "x86_64",
-    };
-
     let update_url = format!(
         "https://github.com/StanleyMasinde/twitter/releases/latest/download/{}-{}-{}.{}",
         binary_name, os_name, arch, ext

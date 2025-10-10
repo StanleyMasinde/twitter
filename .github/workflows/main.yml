@@ -54,23 +54,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: linux-gnu
-            archive_ext: tar.gz
-          - target: x86_64-apple-darwin
-            os: macos-13
-            name: darwin-x64
-            archive_ext: tar.gz
-          - target: aarch64-apple-darwin
-            os: macos-14
-            name: darwin-arm64
-            archive_ext: tar.gz
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            name: windows-x64
-            archive_ext: zip
+         include:
+            - target: x86_64-unknown-linux-gnu
+              os: ubuntu-latest
+              name: linux-x86_64
+              archive_ext: tar.gz
+
+            - target: aarch64-linux-android
+              os: ubuntu-latest
+              name: android-aarch64
+              archive_ext: tar.gz
+
+            - target: x86_64-apple-darwin
+              os: macos-13
+              name: darwin-x86_64
+              archive_ext: tar.gz
+
+            - target: aarch64-apple-darwin
+              os: macos-14
+              name: darwin-aarch64
+              archive_ext: tar.gz
+
+            - target: x86_64-pc-windows-msvc
+              os: windows-latest
+              name: windows-x86_64
+              archive_ext: zip
+       
 
     runs-on: ${{ matrix.os }}
 
