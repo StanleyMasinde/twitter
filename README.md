@@ -17,23 +17,23 @@ You can also download the appropriate binary for your machine from [releases](ht
 
 ### Linux (GNU x64)
 ```bash
-wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-gnu.tar.gz && tar -xzf twitter-linux-gnu.tar.gz && rm twitter-linux-gnu.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
+wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x86_64.tar.gz && tar -xzf twitter-linux-gnu.tar.gz && rm twitter-linux-gnu.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### macOS (Intel)
 ```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x86_64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### macOS (Apple Silicon)
 ```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-arm64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
+curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-aarch64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
 ### Windows x64 Via powershell
 ```powershell
 # Download and extract
-Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x64.zip -OutFile twitter.zip
+Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x86_64.zip -OutFile twitter.zip
 Expand-Archive -Force twitter.zip -DestinationPath .
 
 # Move exe to a user bin directory
