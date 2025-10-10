@@ -129,6 +129,7 @@ pub async fn run() {
 
     println!("> Cleaning up");
     let _ = fs::remove_file(archive_name).await;
+    let _ = fs::remove_file(binary_name).await;
 
     let stdout = output.stdout;
     let output_from_string = String::from_utf8_lossy(&stdout).trim().to_string();
