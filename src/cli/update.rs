@@ -1,4 +1,5 @@
 use futures_util::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     env,
     process::{self, Command},
@@ -13,6 +14,7 @@ pub async fn run() {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
     let temp_dir = env::temp_dir();
+    let client = reqwest::Client::new();
 
     let (os_name, ext) = match os {
         "macos" => ("darwin", "tar.gz"),
@@ -35,7 +37,27 @@ pub async fn run() {
     );
 
     let archive_name = temp_dir.join(format!("{}.{}", binary_name, ext));
-    println!("{}", archive_name.display());
+
+    let head = match client.head(&update_url).send().await {
+        Ok(res) => res,
+        Err(_) => process::exit(1),
+    };
+
+    let total_size = head
+        .headers()
+        .get(reqwest::header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0);
+    let mut downloaded_size: u64 = 0;
+
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .unwrap()
+            .progress_chars("##-"),
+    );
 
     let mut stream = match reqwest::get(update_url).await {
         Ok(res) => res.bytes_stream(),
@@ -53,14 +75,17 @@ pub async fn run() {
         }
     };
 
-    while let Some(item) = stream.next().await {
-        let bytes = match item {
+    while let Some(chunk) = stream.next().await {
+        let bytes = match chunk {
             Ok(b) => b,
             Err(err) => {
                 eprintln!("Failed to read downloaded file: {err}");
                 process::exit(1)
             }
         };
+
+        downloaded_size += bytes.len() as u64;
+        pb.inc(bytes.len() as u64);
 
         let _ = new_file.write_all(&bytes).await;
     }
@@ -79,6 +104,7 @@ pub async fn run() {
             .args(["-xzf", &archive_name.display().to_string()])
             .status(),
     };
+    pb.finish_with_message("Download complete");
 
     if extract_status.is_err() {
         eprintln!("Failed to extract the update file.");
