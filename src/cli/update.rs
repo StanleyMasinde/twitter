@@ -30,8 +30,6 @@ pub async fn run() {
         binary_name, os_name, arch, ext
     );
 
-    println!("{}", update_url);
-
     let archive_name = format!("{}.{}", binary_name, ext);
 
     let mut stream = match reqwest::get(update_url).await {
