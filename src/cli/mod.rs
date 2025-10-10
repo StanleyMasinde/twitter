@@ -1,4 +1,5 @@
 pub mod config;
+pub mod update;
 
 use std::{
     env::temp_dir,
@@ -71,6 +72,9 @@ enum Commands {
 
     /// API usage
     Usage {},
+
+    /// Self update
+    Update {},
 }
 
 pub async fn run() {
@@ -177,5 +181,6 @@ pub async fn run() {
             }
         }
         Commands::Usage {} => usage::show().await,
+        Commands::Update {} => update::run().await,
     }
 }
