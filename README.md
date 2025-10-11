@@ -8,10 +8,11 @@ Simple CLI for posting to Twitter using their API v2. No authentication flow - j
 
 ## Installation
 ### ArchLinux
-ArchLinux users can install from the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) with yay:
+ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
 ```bash
 yay -S twitter-cli
 ```
+After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
