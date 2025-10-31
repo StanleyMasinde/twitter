@@ -21,11 +21,6 @@ You can also download the appropriate binary for your machine from [releases](ht
 wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x86_64.tar.gz && tar -xzf twitter-linux-x86_64.tar.gz && rm twitter-linux-x86_64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
 ```
 
-### macOS (Intel)
-```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-x86_64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
-```
-
 ### macOS (Apple Silicon)
 ```bash
 curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-aarch64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/

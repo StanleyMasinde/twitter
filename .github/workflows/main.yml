@@ -33,7 +33,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Generate full changelog; git-cliff detects the latest tag context.
           git cliff --latest --output CHANGELOG.md >/dev/null
           {
             echo "changelog<<EOF"
@@ -60,13 +59,8 @@ jobs:
               name: linux-x86_64
               archive_ext: tar.gz
 
-            - target: x86_64-apple-darwin
-              os: macos-13
-              name: darwin-x86_64
-              archive_ext: tar.gz
-
             - target: aarch64-apple-darwin
-              os: macos-14
+              os: macos-latest
               name: darwin-aarch64
               archive_ext: tar.gz
 
