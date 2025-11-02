@@ -27,19 +27,19 @@ pub fn show() {
 }
 
 pub fn init() {
-    let _home_dir = dirs::home_dir().expect("Home Directory not found");
+    dirs::home_dir().expect("Home Directory not found");
     let config_dir = utils::get_config_dir();
     let create_dir = fs::create_dir_all(&config_dir);
     match create_dir {
         Ok(_) => {
-            println!("Created home config dir.");
+            println!("> Created home config dir.");
 
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
                 let perms = fs::Permissions::from_mode(0o700);
                 if fs::set_permissions(&config_dir, perms).is_ok() {
-                    println!("Config dir permissions set to 700")
+                    println!("> Config dir permissions set to 700")
                 } else {
                     eprintln!(
                         "Failed to set permissions\nPlease run chmod 700 {}",
@@ -70,7 +70,7 @@ pub fn init() {
         use std::os::unix::fs::PermissionsExt;
         let file_perms = fs::Permissions::from_mode(0o600);
         if fs::set_permissions(&config_file, file_perms).is_ok() {
-            println!("Config file permissions set to 600")
+            println!("> Config file permissions set to 600")
         } else {
             eprintln!(
                 "Failed to set permissions for config file\nPlease run chmod 600 {}",
@@ -96,11 +96,11 @@ pub fn init() {
     };
 
     fs::write(config_file, serialized_config).expect("Could not write to config file.");
-    println!("The config file was created please fill in your credentials.")
+    println!("> The config file was created please fill in your credentials.")
 }
 
 pub fn validate() {
     utils::check_permissions(&utils::get_config_dir(), true);
     utils::check_permissions(&utils::get_config_file(), false);
-    println!("Validation complete. Please check for any warnings and address them.")
+    println!("> Validation complete. Please check for any warnings and address them.")
 }

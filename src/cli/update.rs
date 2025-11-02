@@ -97,7 +97,7 @@ pub async fn run() {
             .args(["-xzf", &archive_name.display().to_string()])
             .status(),
     };
-    pb.finish_with_message("Download complete");
+    pb.finish_with_message("> Download complete");
 
     if extract_status.is_err() {
         eprintln!("Failed to extract the update file.");
@@ -128,5 +128,5 @@ pub async fn run() {
 
     let stdout = output.stdout;
     let output_from_string = String::from_utf8_lossy(&stdout).trim().to_string();
-    println!("Updated to version: {}", output_from_string)
+    println!("> Updated to version: {}", output_from_string)
 }

@@ -47,7 +47,7 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
 
         #[cfg(windows)]
         {
-            println!("Windows does not support permissions.");
+            println!("> Windows does not support permissions.");
         }
     }
 }
