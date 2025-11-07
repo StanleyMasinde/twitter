@@ -171,7 +171,7 @@ impl TwitterApi for Tweet {
                 if index > 0 {
                     self.payload.media = None
                 }
-                println!("Sending tweet {}/{}", index + 1, num_of_tweets);
+                println!("> Sending tweet {}/{}", index + 1, num_of_tweets);
                 let res = self.send(Some(index)).await?;
                 let tweet_id = &res.data.id;
                 self.previous_tweet = Some(tweet_id.to_string());
