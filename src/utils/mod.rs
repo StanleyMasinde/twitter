@@ -1,8 +1,36 @@
 use std::{
     env, fs,
     path::PathBuf,
-    process::{Command, ExitStatus},
+    process::{self, Command, ExitStatus},
+    str::FromStr,
 };
+
+use dirs::home_dir;
+
+use crate::config::Config;
+
+pub fn load_config() -> Config {
+    let config_dir = home_dir()
+        .expect("Home dir not found!")
+        .join(".config/twitter_cli/config.toml");
+
+    let binary_name = env!("CARGO_BIN_NAME");
+
+    let data = match fs::read_to_string(config_dir) {
+        Ok(data) => data,
+        Err(_) => {
+            eprintln!("Failed to read the config file.\nPlease run {binary_name} config --init");
+            process::exit(1)
+        }
+    };
+    match Config::from_str(&data) {
+        Ok(cfg) => cfg,
+        Err(_) => {
+            eprintln!("Failed to load config. Try and run {binary_name} config --init");
+            process::exit(1)
+        }
+    }
+}
 
 pub fn get_config_dir() -> PathBuf {
     dirs::home_dir()

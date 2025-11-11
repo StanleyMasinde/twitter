@@ -1,12 +1,9 @@
-use std::{fmt::Display, fs, process};
+use std::{fmt::Display, process, str::FromStr};
 
-use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 
-use crate::utils;
-
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Config {
+pub struct Account {
     pub consumer_key: String,
     pub consumer_secret: String,
     pub access_token: String,
@@ -14,45 +11,92 @@ pub struct Config {
     pub bearer_token: String,
 }
 
-impl Config {
-    pub fn load() -> Self {
-        Config::validate_config();
-        let binary_name = env!("CARGO_BIN_NAME");
-        let config_dir = home_dir()
-            .expect("Home dir not found!")
-            .join(".config/twitter_cli/config.toml");
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Config {
+    pub current_account: usize,
+    pub accounts: Vec<Account>,
+}
 
-        let data = match fs::read_to_string(config_dir) {
-            Ok(data) => data,
-            Err(_) => {
-                eprintln!(
-                    "Failed to read the config file.\nPlease run {binary_name} config --init"
-                );
+impl FromStr for Config {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let binary_name = env!("CARGO_BIN_NAME");
+
+        let cfg = match toml::from_str::<Self>(s) {
+            Ok(cfg) => cfg,
+            Err(err) => {
+                eprintln!("The config file is malformed. Please run {binary_name} config --init");
+                eprintln!("{}", err);
                 process::exit(1)
             }
         };
 
-        match toml::from_str::<Self>(&data) {
-            Ok(cfg) => cfg,
-            Err(_) => {
-                eprintln!("The config file is malformed. Please run {binary_name} config --init");
+        Ok(cfg)
+    }
+}
+
+impl Config {
+    pub fn current_account(&mut self) -> &Account {
+        match self.accounts.get(self.current_account) {
+            Some(acc) => acc,
+            None => {
+                eprintln!(
+                    "Account with id: {} not found. Exiting.",
+                    self.current_account
+                );
                 process::exit(1)
             }
         }
-    }
-
-    fn validate_config() {
-        utils::check_permissions(&utils::get_config_dir(), true);
-        utils::check_permissions(&utils::get_config_file(), false);
     }
 }
 
 impl Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let current = self.accounts.get(self.current_account).unwrap();
         write!(
             f,
             "Consumer Key: {}\nConsumer Secret: {}\nAccess Token: {}\nAccess Token Secret: {}",
-            self.consumer_key, self.consumer_secret, self.access_token, self.access_secret
+            current.consumer_key,
+            current.consumer_secret,
+            current.access_token,
+            current.access_secret
         )
     }
+}
+
+#[cfg(test)]
+#[test]
+fn test_load_config() {
+    let s = r#"
+    current_account = 0
+
+    [[accounts]] 
+    consumer_key = "your_consumer_key"
+    consumer_secret = "your_consumer_secret" 
+    access_token = "your_access_token" 
+    access_secret = "your_access_secret" 
+    bearer_token = "your_bearer_token"
+    "#;
+    let test_config = Config::from_str(s).unwrap();
+
+    assert_eq!(test_config.current_account, 0);
+}
+
+#[test]
+#[should_panic]
+fn gracefully_fail_to_load_account() {
+    let s = r#"
+    current_account = 1
+
+    [[accounts]] 
+    consumer_key = "your_consumer_key"
+    consumer_secret = "your_consumer_secret" 
+    access_token = "your_access_token" 
+    access_secret = "your_access_secret" 
+    bearer_token = "your_bearer_token"
+    "#;
+    let test_config = Config::from_str(s).unwrap();
+
+    assert_eq!(test_config.current_account, 0);
 }

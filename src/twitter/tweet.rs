@@ -1,5 +1,5 @@
-use crate::config::Config;
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
+use crate::utils::load_config;
 use oauth::{HMAC_SHA1, Token};
 use serde::{Deserialize, Serialize};
 
@@ -85,12 +85,13 @@ impl Tweet {
     }
 
     async fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
-        let cfg = Config::load();
+        let mut cfg = load_config();
+        let current_account = cfg.current_account();
         let token = Token::from_parts(
-            cfg.consumer_key,
-            cfg.consumer_secret,
-            cfg.access_token,
-            cfg.access_secret,
+            current_account.consumer_key.as_str(),
+            current_account.consumer_secret.as_str(),
+            current_account.access_token.as_str(),
+            current_account.access_secret.as_str(),
         );
         let url = "https://api.twitter.com/2/tweets";
         let auth_header = oauth::post(url, &(), &token, HMAC_SHA1);

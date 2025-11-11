@@ -4,7 +4,7 @@ use oauth::{HMAC_SHA1, Token};
 use reqwest::multipart;
 use serde::Deserialize;
 
-use crate::config::Config;
+use crate::utils::load_config;
 
 #[derive(Debug, Deserialize)]
 struct MediaUploadResponse {
@@ -25,12 +25,13 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
     let upload_url = "https://api.x.com/2/media/upload";
     println!("> Uploading image.");
 
-    let cfg = Config::load();
+    let mut cfg = load_config();
+    let current_account = cfg.current_account();
     let token = Token::from_parts(
-        cfg.consumer_key,
-        cfg.consumer_secret,
-        cfg.access_token,
-        cfg.access_secret,
+        current_account.consumer_key.as_str(),
+        current_account.consumer_secret.as_str(),
+        current_account.access_token.as_str(),
+        current_account.access_secret.as_str(),
     );
     let auth_header = oauth::post(upload_url, &(), &token, HMAC_SHA1);
     let file_kind = infer::get_from_path(&path);

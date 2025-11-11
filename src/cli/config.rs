@@ -1,6 +1,9 @@
 use std::{fs, io::ErrorKind, process};
 
-use crate::{config::Config, utils};
+use crate::{
+    config::{Account, Config},
+    utils,
+};
 
 pub fn edit() {
     let config_file = utils::get_config_file();
@@ -79,12 +82,17 @@ pub fn init() {
         }
     }
 
-    let config = Config {
+    let account = Account {
         consumer_key: "your_consumer_key".to_string(),
         consumer_secret: "your_consumer_secret".to_string(),
         access_token: "your_access_token".to_string(),
         access_secret: "your_access_secret".to_string(),
         bearer_token: "your_bearer_token".to_string(),
+    };
+
+    let config = Config {
+        current_account: 1,
+        accounts: vec![account],
     };
 
     let serialized_config = match toml::to_string(&config) {

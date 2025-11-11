@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::utils::load_config;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use std::fmt::Display;
@@ -25,8 +25,9 @@ impl Display for OkResponse {
 }
 
 pub async fn show() {
-    let cfg = Config::load();
-    let token = cfg.bearer_token;
+    let mut cfg = load_config();
+    let account = cfg.current_account();
+    let token = account.bearer_token.as_str();
     let auth_header = format!("Bearer {}", token);
     let client = reqwest::Client::new();
     let response = client
