@@ -12,7 +12,6 @@ use std::{
 use clap::{Parser, Subcommand};
 
 use crate::{
-    server,
     twitter::{
         self,
         tweet::{self, Media, TweetBody, TwitterApi},
@@ -29,13 +28,6 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    /// Run in server mode
-    Serve {
-        /// Specify the server port
-        #[arg(long)]
-        port: Option<u16>,
-    },
-
     /// Create a new tweet.
     Tweet {
         /// The body of the tweet
@@ -81,7 +73,6 @@ pub async fn run() {
     let args = Args::parse();
 
     match args.command {
-        Commands::Serve { port } => server::run(port).await,
         Commands::Tweet {
             body,
             image,
