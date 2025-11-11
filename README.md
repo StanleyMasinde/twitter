@@ -139,20 +139,6 @@ The parameter is image because I do not see the point of uploading video from th
 twitter tweet --image ~/Downloads/image.png
 ```
 
-### Tweet in Server Mode
-```bash
-# Start local server (default port 3000)
-twitter serve
-
-# Custom port
-twitter serve --port 8080
-
-# Post via HTTP
-curl -X POST http://localhost:3000/api/tweet \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Building in public without the scroll trap"}'
-```
-
 ### Tweet a thread
 ```bash
 twitter tweet
