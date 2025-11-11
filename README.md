@@ -70,6 +70,19 @@ Opens your default editor (`$EDITOR`) with the config file. Creates `~/.config/t
 
 Expected format:
 ```toml
+# The account that will be used to tweet
+current_account = 0
+
+# Account 1
+[[accounts]]
+consumer_key = "your_consumer_key"
+consumer_secret = "your_consumer_secret"
+access_token = "your_access_token"
+access_secret = "your_access_secret"
+bearer_token = "your_bearer_token"
+
+# Account 2
+[[accounts]]
 consumer_key = "your_consumer_key"
 consumer_secret = "your_consumer_secret"
 access_token = "your_access_token"
