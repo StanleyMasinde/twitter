@@ -56,7 +56,8 @@ impl Display for Config {
         let current = self.accounts.get(self.current_account).unwrap();
         write!(
             f,
-            "Consumer Key: {}\nConsumer Secret: {}\nAccess Token: {}\nAccess Token Secret: {}",
+            "Current Account: {} \nConsumer Key: {}\nConsumer Secret: {}\nAccess Token: {}\nAccess Token Secret: {}",
+            self.current_account,
             current.consumer_key,
             current.consumer_secret,
             current.access_token,
