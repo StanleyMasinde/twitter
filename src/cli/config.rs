@@ -91,7 +91,7 @@ pub fn init() {
     };
 
     let config = Config {
-        current_account: 1,
+        current_account: 0,
         accounts: vec![account],
     };
 
