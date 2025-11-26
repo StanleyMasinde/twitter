@@ -1,8 +1,8 @@
-pub mod cli;
-pub mod config;
-pub mod twitter;
-pub mod usage;
-pub mod utils;
+mod cli;
+mod config;
+mod twitter;
+mod usage;
+mod utils;
 
 #[tokio::main]
 async fn main() {
