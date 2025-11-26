@@ -8,7 +8,7 @@ pub struct CreateTweetErr {
     pub message: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct TweetBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
@@ -34,38 +34,21 @@ pub trait TwitterApi {
     ) -> impl Future<Output = Result<Response<TweetCreateResponse>, CreateTweetErr>>;
 }
 
-pub struct Tweet {
+#[derive(Default)]
+pub struct Tweet<'t> {
     client: reqwest::Client,
     previous_tweet: Option<String>,
-    separator: String,
+    separator: &'t str,
     payload: TweetBody,
     tweet_parts: Vec<String>,
 }
 
-impl Default for Tweet {
-    fn default() -> Self {
-        let payload = TweetBody {
-            text: Some(String::new()),
-            reply: None,
-            media: None,
-        };
-
-        Self {
-            client: Default::default(),
-            previous_tweet: None,
-            separator: Default::default(),
-            payload,
-            tweet_parts: Default::default(),
-        }
-    }
-}
-
-impl Tweet {
+impl<'t> Tweet<'t> {
     pub fn new(client: reqwest::Client, payload: TweetBody) -> Self {
         Self {
             client,
             previous_tweet: None,
-            separator: "---".to_string(),
+            separator: "---",
             payload,
             tweet_parts: vec![],
         }
@@ -149,7 +132,7 @@ impl Tweet {
     }
 }
 
-impl TwitterApi for Tweet {
+impl<'t> TwitterApi for Tweet<'t> {
     async fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
