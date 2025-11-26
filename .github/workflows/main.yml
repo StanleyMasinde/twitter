@@ -16,37 +16,27 @@ env:
   BINARY_NAME: twitter
 
 jobs:
-  generate-changelog:
+  changelog:
     name: Generate changelog
     runs-on: ubuntu-latest
+    outputs:
+      content: ${{ steps.git-cliff.outputs.content }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install git-cliff
-        uses: kenji-miyake/setup-git-cliff@v2
-
-      - name: Generate CHANGELOG.md
-        id: changelog
-        shell: bash
-        run: |
-          set -euo pipefail
-          git cliff --latest --output CHANGELOG.md >/dev/null
-          {
-            echo "changelog<<EOF"
-            cat CHANGELOG.md
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Upload changelog artifact
-        uses: actions/upload-artifact@v4
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v4
+        id: git-cliff
         with:
-          name: changelog
-          path: CHANGELOG.md
-          if-no-files-found: error
-          retention-days: 7
+          args: --latest
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Print the changelog
+        run: cat "${{ steps.git-cliff.outputs.changelog }}"
 
   build:
     name: Build ${{ matrix.name }}
@@ -59,14 +49,29 @@ jobs:
               name: linux-x86_64
               archive_ext: tar.gz
 
+            - target: aarch64-unknown-linux-gnu
+              os: ubuntu-24.04-arm
+              name: linux-arm
+              archive_ext: tar.gz
+
             - target: aarch64-apple-darwin
               os: macos-latest
               name: darwin-aarch64
               archive_ext: tar.gz
 
+            - target: x86_64-apple-darwin
+              os: macos-15-intel
+              name: darwin-x86_64
+              archive_ext: tar.gz
+
             - target: x86_64-pc-windows-msvc
               os: windows-latest
               name: windows-x86_64
+              archive_ext: zip
+
+            - target: aarch64-pc-windows-msvc
+              os: windows-11-arm
+              name: windows-arm
               archive_ext: zip
        
 
@@ -88,13 +93,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build release
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --locked --release --target "${{ matrix.target }}"
+          cargo build --release --target "${{ matrix.target }}"
 
       - name: Package
         id: package
@@ -134,7 +139,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [generate-changelog, build]
+    needs: [changelog, build]
     runs-on: ubuntu-latest
 
     steps:
@@ -143,27 +148,14 @@ jobs:
         with:
           path: artifacts
 
-      - name: Extract changelog for release body
-        id: get-changelog
-        shell: bash
-        run: |
-          set -euo pipefail
-          CHANGELOG_PATH="artifacts/changelog/CHANGELOG.md"
-          test -f "$CHANGELOG_PATH" || { echo "Missing changelog artifact"; exit 1; }
-          {
-            echo "changelog<<EOF"
-            cat "$CHANGELOG_PATH"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
       - name: List artifacts
-        run: find artifacts -type f -maxdepth 2 -name "*.tar.gz" -print
+        run: find artifacts -type f -maxdepth 2 \( -name "*.tar.gz" -o -name "*.zip" \)
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         with:
-          body: ${{ steps.get-changelog.outputs.changelog }}
+          body: ${{ needs.changelog.outputs.content }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
