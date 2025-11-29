@@ -23,7 +23,7 @@ pub struct UploadMediaError {
 
 pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, UploadMediaError> {
     let upload_url = "https://api.x.com/2/media/upload";
-    println!("> Uploading image.");
+    println!("> Uploading image to Twitter.");
 
     let mut cfg = load_config();
     let current_account = cfg.current_account();
@@ -75,7 +75,7 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
                 message: err.to_string(),
             })?;
 
-        println!("> Image uploaded to Twitter.");
+        println!("> Image uploaded to Twitter. The image ID will be added to the first tweet.");
 
         Ok(media_upload_res.data.id)
     } else {
