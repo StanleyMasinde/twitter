@@ -84,18 +84,14 @@ pub async fn run() {
     }
 
     let extract_status = match os {
-        "windows" => Command::new("powershell")
-            .args([
-                "-Command",
-                &format!(
-                    "Expand-Archive -Path {} -DestinationPath . -Force",
-                    archive_name.display()
-                ),
-            ])
-            .status(),
-        _ => Command::new("tar")
-            .args(["-xzf", &archive_name.display().to_string()])
-            .status(),
+        "windows" => {
+            let fname = archive_name.to_str().unwrap();
+            Command::new("tar").args(["-xf", fname]).status()
+        }
+        _ => {
+            let fname = archive_name.to_str().unwrap();
+            Command::new("tar").args(["-xzf", fname]).status()
+        }
     };
     pb.finish_with_message("> Download complete");
 
