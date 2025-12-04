@@ -48,13 +48,10 @@ pub fn open_editor(file: &PathBuf) -> ExitStatus {
     #[cfg(unix)]
     let editor = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
-        .unwrap_or_else(|_| {
-            if cfg!(windows) {
-                return "notepad".to_string();
-            } else {
-                "vi".to_string()
-            }
-        });
+        .unwrap_or_else(|_| "vi".to_string());
+
+    #[cfg(windows)]
+    let editor = "notepad".to_string();
 
     Command::new(editor)
         .arg(file)
