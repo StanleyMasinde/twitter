@@ -47,6 +47,10 @@ if ($old -notlike "*$dest*") {
 $env:Path += ";$dest"
 ```
 
+>[!NOTE]
+> For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
+> After that the above installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
+
 ## Updating 
 Twitter CLI can self update. To do that, just run `twitter update`  and it will download the latest version.
 
