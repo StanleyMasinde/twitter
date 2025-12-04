@@ -80,7 +80,7 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
         }
 
         if cfg!(windows) {
-            println!("> Windows does not support permissions.");
+            println!("> Windows does not support POSIX permissions. Skipping check.");
         }
     }
 }
