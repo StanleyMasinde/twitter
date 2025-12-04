@@ -64,10 +64,11 @@ pub fn open_editor(file: &PathBuf) -> ExitStatus {
 
 pub fn check_permissions(path: &PathBuf, is_dir: bool) {
     if let Ok(metadata) = fs::metadata(path) {
-        if cfg!(unix) {
+        #[cfg(unix)]
+        {
             use std::os::unix::fs::PermissionsExt;
-            let mode = metadata.permissions().mode() & 0o777;
 
+            let mode = metadata.permissions().mode() & 0o777;
             let expected = if is_dir { 0o700 } else { 0o600 };
 
             if mode != expected {
@@ -79,7 +80,8 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
             }
         }
 
-        if cfg!(windows) {
+        #[cfg(windows)]
+        {
             println!("> Windows does not support POSIX permissions. Skipping check.");
         }
     }
