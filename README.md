@@ -27,6 +27,8 @@ curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitt
 ```
 
 ### Windows x64 Via powershell
+> Run the Windows terminal as Administrator. 
+> Ensure your default shell is Powershell if you are not sure, search for pwershell and run it.
 ```powershell
 # Download and extract
 Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x86_64.zip -OutFile twitter.zip
