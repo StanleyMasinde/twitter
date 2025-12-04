@@ -64,8 +64,7 @@ pub fn open_editor(file: &PathBuf) -> ExitStatus {
 
 pub fn check_permissions(path: &PathBuf, is_dir: bool) {
     if let Ok(metadata) = fs::metadata(path) {
-        #[cfg(unix)]
-        {
+        if cfg!(unix) {
             use std::os::unix::fs::PermissionsExt;
             let mode = metadata.permissions().mode() & 0o777;
 
@@ -80,8 +79,7 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
             }
         }
 
-        #[cfg(windows)]
-        {
+        if cfg!(windows) {
             println!("> Windows does not support permissions.");
         }
     }
