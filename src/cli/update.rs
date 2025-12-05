@@ -100,9 +100,21 @@ pub async fn run() {
         process::exit(1)
     }
 
+    #[cfg(unix)]
     let install_status = Command::new("sudo")
         .arg("install")
         .args(["-sm", "755", binary_name, "/usr/local/bin/"])
+        .status();
+
+    #[cfg(windows)]
+    let install_status = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            r#"$dest = \"$env:USERPROFILE\bin\"; 
+           New-Item -ItemType Directory -Force -Path $dest | Out-Null; 
+           Move-Item -Force \"./twitter.exe\" \"$dest\twitter.exe\";"#,
+        ])
         .status();
 
     if install_status.is_err() {
