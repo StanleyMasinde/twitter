@@ -20,8 +20,8 @@ pub async fn run() {
         "macos" => ("darwin", "tar.gz"),
         "linux" => ("linux", "tar.gz"),
         "windows" => ("windows", "zip"),
-        other => {
-            eprintln!("Unsupported OS: {}", other);
+        other_os => {
+            eprintln!("Sorry, self update for {} is not supported yet.", other_os);
             process::exit(1);
         }
     };
