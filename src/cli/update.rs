@@ -2,12 +2,14 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     env,
-    process::{self, Command},
+    process::Command,
 };
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
 };
+
+use crate::utils::gracefully_exit;
 
 pub async fn run() {
     let binary_name = "twitter";
@@ -21,8 +23,8 @@ pub async fn run() {
         "linux" => ("linux", "tar.gz"),
         "windows" => ("windows", "zip"),
         other_os => {
-            eprintln!("Sorry, self update for {} is not supported yet.", other_os);
-            process::exit(1);
+            let message = format!("Sorry, self update for {} is not supported yet.", other_os);
+            gracefully_exit(&message)
         }
     };
 
@@ -35,7 +37,7 @@ pub async fn run() {
 
     let head = match client.head(&update_url).send().await {
         Ok(res) => res,
-        Err(_) => process::exit(1),
+        Err(_) => gracefully_exit("Failed to to fetch update information."),
     };
 
     let total_size = head
@@ -56,16 +58,16 @@ pub async fn run() {
     let mut stream = match reqwest::get(update_url).await {
         Ok(res) => res.bytes_stream(),
         Err(err) => {
-            eprintln!("Could not make a network req: {}", err);
-            process::exit(1)
+            let message = format!("Could not make a network req: {}", err);
+            gracefully_exit(&message)
         }
     };
 
     let mut new_file = match File::create(&archive_name).await {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("Failed to create temp file: {}", err);
-            process::exit(1)
+            let message = format!("Failed to create temp file: {}", err);
+            gracefully_exit(&message)
         }
     };
 
@@ -73,8 +75,8 @@ pub async fn run() {
         let bytes = match chunk {
             Ok(b) => b,
             Err(err) => {
-                eprintln!("Failed to read downloaded file: {err}");
-                process::exit(1)
+                let message = format!("Failed to read downloaded file: {err}");
+                gracefully_exit(&message)
             }
         };
 
@@ -96,8 +98,8 @@ pub async fn run() {
     pb.finish_with_message("> Download complete");
 
     if extract_status.is_err() {
-        eprintln!("Failed to extract the update file.");
-        process::exit(1)
+        let message = "Failed to extract the update file.".to_string();
+        gracefully_exit(&message)
     }
 
     #[cfg(unix)]
@@ -118,15 +120,15 @@ pub async fn run() {
         .status();
 
     if install_status.is_err() {
-        eprintln!("Failed to update");
-        process::exit(1)
+        let message = "Failed to update".to_string();
+        gracefully_exit(&message)
     }
 
     let output = match Command::new("twitter").arg("--version").output() {
         Ok(output) => output,
         Err(err) => {
-            eprintln!("Could not get the new version name: {}", err);
-            process::exit(1)
+            let message = format!("Could not get the new version name: {}", err);
+            gracefully_exit(&message)
         }
     };
 

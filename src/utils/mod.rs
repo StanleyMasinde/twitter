@@ -19,15 +19,15 @@ pub fn load_config() -> Config {
     let data = match fs::read_to_string(config_dir) {
         Ok(data) => data,
         Err(_) => {
-            eprintln!("Failed to read the config file.\nPlease run {binary_name} config --init");
-            process::exit(1)
+            let message =
+                format!("Failed to read the config file.\nPlease run {binary_name} config --init");
+            gracefully_exit(&message)
         }
     };
     match Config::from_str(&data) {
         Ok(cfg) => cfg,
         Err(_) => {
-            eprintln!("Failed to load config. Try and run {binary_name} config --init");
-            process::exit(1)
+            gracefully_exit("Failed to load config. Try and run {binary_name} config --init");
         }
     }
 }
@@ -82,4 +82,9 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
             println!("> Windows does not support POSIX permissions. Skipping check.");
         }
     }
+}
+
+pub(crate) fn gracefully_exit(message: &str) -> ! {
+    println!("{message}");
+    process::exit(1)
 }

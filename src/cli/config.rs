@@ -1,8 +1,8 @@
-use std::{fs, io::ErrorKind, process};
+use std::{fs, io::ErrorKind};
 
 use crate::{
     config::{Account, Config},
-    utils,
+    utils::{self, gracefully_exit},
 };
 
 pub fn edit() {
@@ -44,25 +44,21 @@ pub fn init() {
                 if fs::set_permissions(&config_dir, perms).is_ok() {
                     println!("> Config dir permissions set to 700")
                 } else {
-                    eprintln!(
-                        "Failed to set permissions\nPlease run chmod 700 {}",
-                        config_dir.to_str().unwrap()
-                    )
+                    use crate::utils::gracefully_exit;
+
+                    gracefully_exit("Failed to set permissions\nPlease run chmod 700 {}")
                 }
             }
         }
         Err(err) => match err.kind() {
             ErrorKind::PermissionDenied => {
-                eprintln!("You don't have permission to create the config dir.");
-                process::exit(1)
+                gracefully_exit("You don't have permission to create the config dir.")
             }
             ErrorKind::AlreadyExists => {
-                eprintln!("Config directory already exists.");
+                eprintln!();
+                gracefully_exit("Config directory already exists")
             }
-            _ => {
-                eprintln!("An unknown error occurred.");
-                process::exit(1);
-            }
+            _ => gracefully_exit("An unknown error occurred."),
         },
     }
 
@@ -75,10 +71,12 @@ pub fn init() {
         if fs::set_permissions(&config_file, file_perms).is_ok() {
             println!("> Config file permissions set to 600")
         } else {
-            eprintln!(
-                "Failed to set permissions for config file\nPlease run chmod 600 {}",
+            let message = format!(
+                "Failed to set permissions for the config file.\nPlease run chmod 600 {}",
                 config_file.to_str().unwrap()
-            )
+            );
+
+            gracefully_exit(&message)
         }
     }
 
@@ -97,10 +95,7 @@ pub fn init() {
 
     let serialized_config = match toml::to_string(&config) {
         Ok(cfg_str) => cfg_str,
-        Err(_) => {
-            eprintln!("Could not serialize the config.");
-            process::exit(1);
-        }
+        Err(_) => gracefully_exit("Could not serialize the config."),
     };
 
     fs::write(config_file, serialized_config).expect("Could not write to config file.");

@@ -1,6 +1,8 @@
-use std::{fmt::Display, process, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
+
+use crate::utils::gracefully_exit;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
@@ -26,9 +28,11 @@ impl FromStr for Config {
         let cfg = match toml::from_str::<Self>(s) {
             Ok(cfg) => cfg,
             Err(err) => {
-                eprintln!("The config file is malformed. Please run {binary_name} config --init");
-                eprintln!("{}", err);
-                process::exit(1)
+                let message = format!(
+                    "The config file is malformed. Please run {binary_name} config --init\n{}",
+                    err
+                );
+                gracefully_exit(&message)
             }
         };
 
@@ -41,11 +45,11 @@ impl Config {
         match self.accounts.get(self.current_account) {
             Some(acc) => acc,
             None => {
-                eprintln!(
+                let message = format!(
                     "Account with id: {} not found. Exiting.",
                     self.current_account
                 );
-                process::exit(1)
+                gracefully_exit(&message)
             }
         }
     }

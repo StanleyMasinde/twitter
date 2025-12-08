@@ -6,7 +6,6 @@ use std::{
     fs,
     io::{self, IsTerminal, Read},
     path::PathBuf,
-    process,
 };
 
 use clap::{Parser, Subcommand};
@@ -16,7 +15,8 @@ use crate::{
         self,
         tweet::{self, Media, TweetBody, TwitterApi},
     },
-    usage, utils,
+    usage,
+    utils::{self, gracefully_exit},
 };
 
 #[derive(Parser, Debug)]
@@ -85,10 +85,7 @@ pub async fn run() {
                 let upload_result = twitter::media::upload(client.clone(), image_path).await;
                 media_id = match upload_result {
                     Ok(media) => Some(media),
-                    Err(err) => {
-                        eprintln!("{}", err.message);
-                        process::exit(1);
-                    }
+                    Err(err) => gracefully_exit(&err.message),
                 };
             }
 
@@ -102,10 +99,9 @@ pub async fn run() {
                         if read_stdin_string.is_ok() {
                             Some(buf.trim().to_string())
                         } else {
-                            eprintln!(
-                                "Failed to read stdin as text.\nMake sure you are piping UTF-8 text."
-                            );
-                            process::exit(1)
+                            gracefully_exit(
+                                "Failed to read stdin as text.\nMake sure you are piping UTF-8 text.",
+                            )
                         }
                     } else if editor {
                         let temp_file = temp_dir().join("tweet.txt");
@@ -118,12 +114,11 @@ pub async fn run() {
                                     Some(tweet)
                                 }
                                 Err(_) => {
-                                    eprintln!("Failed to read the tweet.");
-                                    process::exit(1);
+                                    gracefully_exit("Failed to read the tweet from the editor.")
                                 }
                             }
                         } else {
-                            process::exit(1)
+                            gracefully_exit("Failed to open the default editor");
                         }
                     } else {
                         None

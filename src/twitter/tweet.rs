@@ -147,7 +147,7 @@ impl<'t> TwitterApi for Tweet<'t> {
         };
 
         if self.is_thread(&text) {
-            let parts = self.split_tweet(&text, &self.separator);
+            let parts = self.split_tweet(&text, self.separator);
             self.tweet_parts = parts.clone();
             let num_of_tweets = parts.len();
             for index in 0..num_of_tweets {
