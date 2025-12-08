@@ -6,6 +6,7 @@ pub mod media;
 pub mod tweet;
 
 pub struct Response<T> {
+    #[allow(dead_code)]
     pub status: u16,
     pub content: T,
 }
