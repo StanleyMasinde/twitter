@@ -1,9 +1,6 @@
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::{
-    env,
-    process::Command,
-};
+use std::{env, process::Command};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,

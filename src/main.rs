@@ -1,8 +1,4 @@
-mod cli;
-mod config;
-mod twitter;
-mod usage;
-mod utils;
+use twitter::cli;
 
 #[tokio::main]
 async fn main() {

@@ -1,5 +1,6 @@
 use std::{
-    env, fs,
+    env::{self, var},
+    fs,
     path::PathBuf,
     process::{self, Command, ExitStatus},
     str::FromStr,
@@ -14,7 +15,7 @@ pub fn load_config() -> Config {
         .expect("Home dir not found!")
         .join(".config/twitter_cli/config.toml");
 
-    let binary_name = env!("CARGO_BIN_NAME");
+    let binary_name = var("CARGO_BIN_NAME").unwrap_or("twitter".to_string());
 
     let data = match fs::read_to_string(config_dir) {
         Ok(data) => data,

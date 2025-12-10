@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{env::var, fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +23,7 @@ impl FromStr for Config {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let binary_name = env!("CARGO_BIN_NAME");
+        let binary_name = var("CARGO_BIN_NAME").unwrap_or("twitter".to_string());
 
         let cfg = match toml::from_str::<Self>(s) {
             Ok(cfg) => cfg,

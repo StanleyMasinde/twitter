@@ -1,4 +1,4 @@
-use std::{fs, io::ErrorKind};
+use std::{env::var, fs, io::ErrorKind};
 
 use crate::{
     config::{Account, Config},
@@ -16,7 +16,7 @@ pub fn edit() {
 }
 
 pub fn show() {
-    let binary_name = env!("CARGO_BIN_NAME");
+    let binary_name = var("CARGO_BIN_NAME").unwrap_or("twitter".to_string());
     let config_file = utils::get_config_file();
     if let Ok(file_content) = fs::read_to_string(config_file) {
         if let Ok(config) = toml::from_str::<Config>(&file_content) {

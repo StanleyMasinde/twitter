@@ -58,7 +58,7 @@ impl<'t> Tweet<'t> {
         tweet.lines().any(|line| line.trim() == self.separator)
     }
 
-    fn split_tweet(&self, tweet: &str, separator: &str) -> Vec<String> {
+    pub fn split_tweet(&self, tweet: &str, separator: &str) -> Vec<String> {
         tweet
             .lines()
             .collect::<Vec<&str>>()
