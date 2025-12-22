@@ -1,0 +1,2 @@
+# Install script is documentation/tooling, not part of the main codebase
+*.sh linguist-documentation
