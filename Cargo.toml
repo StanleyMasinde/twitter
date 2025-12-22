@@ -1,16 +1,16 @@
 [package]
 name = "twitter"
-version = "1.4.0"
+version = "1.5.0"
 edition = "2024"
 
 [dependencies]
 log = "0.4.29"
-reqwest = { version = "0.12.25", default-features = false, features = ['json', 'multipart', 'stream', 'rustls-tls'] }
+reqwest = { version = "0.12.27", default-features = false, features = ['json', 'multipart', 'stream', 'rustls-tls'] }
 serde =  "1.0.228"
-serde_json = "1.0.145"
+serde_json = "1.0.146"
 oauth = { version = "0.6", package = "oauth1-request" }
 dirs = "6.0.0"
-toml = "0.9.8"
+toml = "0.9.10"
 clap = { version = "4.5.53", features = ["derive"] }
 infer = "0.19.0"
 futures-util = "0.3.31"
