@@ -7,6 +7,35 @@ I love creating content on Twitter but twitter.com leads to doomscrolling. This 
 Simple CLI for posting to Twitter using their API v2. No authentication flow - just configure once and tweet.
 
 ## Installation
+
+### Quick install
+Install the latest version with the following command.
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh
+```
+This will automatically
+- Detect your operating system and architecture
+- Download the correct binary
+- Verify the SHA256 checksum for security
+- Install to /usr/local/bin
+- Clean up temporary files
+
+### Install a specific version
+```shell
+curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh -s v1.5.0
+```
+
+### Custom install location
+```shell
+curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | TWITTER_INSTALL=~/.local/bin sh
+```
+
+### Updating
+```shell
+twitter update
+```
+
 ### ArchLinux
 ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
 ```bash
@@ -15,16 +44,6 @@ yay -S twitter-cli
 After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
-
-### Linux (GNU x64)
-```bash
-wget https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-linux-x86_64.tar.gz && tar -xzf twitter-linux-x86_64.tar.gz && rm twitter-linux-x86_64.tar.gz && sudo install -sm 755 twitter /usr/local/bin/
-```
-
-### macOS (Apple Silicon)
-```bash
-curl -L https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-darwin-aarch64.tar.gz | tar -xz && sudo install -sm 755 twitter /usr/local/bin/
-```
 
 ### Windows x64 Via powershell
 > Run the Windows terminal as Administrator. 
