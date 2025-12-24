@@ -72,9 +72,6 @@ $env:Path += ";$dest"
 > For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
 > After that the above installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
 
-## Updating 
-Twitter CLI can self update. To do that, just run `twitter update`  and it will download the latest version.
-
 ## Configuration
 1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
 2. Create a new app and get your API credentials
