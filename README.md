@@ -41,6 +41,10 @@ ArchLinux users can install the community maintained AUR binary [package](https:
 ```bash
 yay -S twitter-cli
 ```
+>[!WARNING]
+> The AUR package is managed by the community. 
+> Please use the install script for Unix based systems.
+
 After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
