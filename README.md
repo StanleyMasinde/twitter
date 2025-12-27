@@ -97,6 +97,8 @@ Opens your default editor (`$EDITOR`) with the config file. Creates `~/.config/t
 Expected format:
 ```toml
 # The account that will be used to tweet
+# Please note, current account uses 0 based index.
+# This means the first account is 0
 current_account = 0
 
 # Account 1
