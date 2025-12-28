@@ -169,7 +169,7 @@ twitter tweet --image ~/Downloads/image.png
 
 ### Tweet a thread
 ```bash
-twitter tweet
+twitter tweet --editor
 ```
 This will launch your default terminal editor. Separate your threads with --- like this.
 ```txt
