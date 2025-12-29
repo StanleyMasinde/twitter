@@ -181,11 +181,9 @@ This will be tweet 3
 ```
 
 **API Response:**
-```json
-{
-  "id": "1234567890",
-  "text": "Building in public without the scroll trap"
-}
+```text
+Tweet Id: 2006409743426818416
+Tweet body: Hello, world
 ```
 
 ## Show usage
