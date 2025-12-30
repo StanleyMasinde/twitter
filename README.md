@@ -191,7 +191,10 @@ You can show the API usage via the usage subcommand.
 ```shell
 twitter usage
 ```
-The above command will show the API usage.
+The above command will show the API usage like the one below.
+```text
+Daily project usage: 0/100
+```
 
 ## Future Plans
 - Thread support via stdin piping
