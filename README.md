@@ -202,5 +202,5 @@ Daily project usage: 0/100
 - Multiple account profiles
 
 ## Tech Stack
-- Rust + Axum
+- Rust
 - Twitter API v2
