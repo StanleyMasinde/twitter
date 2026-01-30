@@ -4,12 +4,12 @@
 ## What it does
 I love creating content on Twitter but twitter.com leads to doomscrolling. This is my way of fighting that.
 
-Simple CLI for posting to Twitter using their API v2. No authentication flow - just configure once and tweet.
+Simple CLI for posting to Twitter using their API v2. No OAuth flow - just configure once and tweet.
 
 ## Installation
 
 ### Quick install
-Install the latest version with the following command.
+Install the latest version with the following command. If you prefer, review the script first.
 
 ```shell
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh
@@ -20,6 +20,11 @@ This will automatically
 - Verify the SHA256 checksum for security
 - Install to /usr/local/bin
 - Clean up temporary files
+
+Review the installer before running:
+```shell
+curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh
+```
 
 ### Install a specific version
 ```shell
@@ -43,15 +48,15 @@ yay -S twitter-cli
 ```
 >[!WARNING]
 > The AUR package is managed by the community. 
-> Please use the install script for Unix based systems.
+> Please use the install script for other Unix based systems.
 
 After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
-### Windows x64 Via powershell
+### Windows x64 Via PowerShell
 > Run the Windows terminal as Administrator. 
-> Ensure your default shell is Powershell if you are not sure, search for pwershell and run it.
+> Ensure your default shell is PowerShell. If you are not sure, search for PowerShell and run it.
 ```powershell
 # Download and extract
 Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x86_64.zip -OutFile twitter.zip
@@ -74,7 +79,7 @@ $env:Path += ";$dest"
 
 >[!NOTE]
 > For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
-> After that the above installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
+> After that installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
 
 ## Configuration
 1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
@@ -82,7 +87,7 @@ $env:Path += ";$dest"
 
 ### Interactive Setup (Recommended)
 > [!WARNING]
-> This will override your existing config Only run it on setup.
+> This will override your existing config. Only run it on setup.
 
 ```bash
 twitter config --init
@@ -119,7 +124,7 @@ bearer_token = "your_bearer_token"
 ```
 
 ### Manual Configuration
-Create config file at `~/.config/twitter_cli/config.toml` with the format above.
+Create config file at `~/.config/twitter_cli/config.toml` with the format above. Keep this file private since it contains API secrets.
 
 ### Validation
 ```bash
@@ -149,9 +154,7 @@ twitter tweet --body "Building something cool today"
 ```bash
 echo "I love CLIs" | twitter tweet
 ```
-
-
-##### From text files
+#### From text files
 ```bash
 cat drafts.txt | twitter tweet
 ```
@@ -168,6 +171,7 @@ twitter tweet --image ~/Downloads/image.png
 ```
 
 ### Tweet a thread
+Threads are created whenever input contains `---` separators, regardless of input mode.
 ```bash
 twitter tweet --editor
 ```
@@ -178,6 +182,12 @@ This is a very long thread. This being the intro.
 The three dashes indicate the boundary between tweets so this will be tweet 2.
 ---
 This will be tweet 3
+```
+
+#### Thread via stdin
+Pipe thread content with `---` separators.
+```bash
+cat thread.txt | twitter tweet
 ```
 
 **API Response:**
@@ -195,11 +205,6 @@ The above command will show the API usage like the one below.
 ```text
 Daily project usage: 0/100
 ```
-
-## Future Plans
-- Thread support via stdin piping
-- Media attachments
-- Multiple account profiles
 
 ## Tech Stack
 - Rust
