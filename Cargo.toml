@@ -5,17 +5,17 @@ edition = "2024"
 
 [dependencies]
 log = "0.4.29"
-reqwest = { version = "0.12.27", default-features = false, features = ['json', 'multipart', 'stream', 'rustls-tls'] }
-serde =  "1.0.228"
-serde_json = "1.0.146"
+reqwest = { version = "0.13.1", default-features = false, features = ['json', 'multipart', 'stream', 'query'] }
+serde =  { version = "1.0.228", features = ['derive']}
+serde_json = "1.0.149"
 oauth = { version = "0.6", package = "oauth1-request" }
 dirs = "6.0.0"
-toml = "0.9.10"
-clap = { version = "4.5.53", features = ["derive"] }
+toml = "0.9.11"
+clap = { version = "4.5.56", features = ["derive"] }
 infer = "0.19.0"
 futures-util = "0.3.31"
 indicatif = "0.18.3"
-tokio = { version = "1.48.0", features = ['macros', 'rt-multi-thread'] } 
+tokio = { version = "1.49.0", features = ['macros', 'rt-multi-thread', 'io-util'] } 
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

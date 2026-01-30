@@ -1,12 +1,13 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types:
+      - published
+      - prereleased
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -16,64 +17,41 @@ env:
   BINARY_NAME: twitter
 
 jobs:
-  changelog:
-    name: Generate changelog
-    runs-on: ubuntu-latest
-    outputs:
-      content: ${{ steps.git-cliff.outputs.content }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate a changelog
-        uses: orhun/git-cliff-action@v4
-        id: git-cliff
-        with:
-          args: --latest
-        env:
-          GITHUB_REPO: ${{ github.repository }}
-
-      - name: Print the changelog
-        run: cat "${{ steps.git-cliff.outputs.changelog }}"
-
   build:
     name: Build ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
-         include:
-            - target: x86_64-unknown-linux-gnu
-              os: ubuntu-latest
-              name: linux-x86_64
-              archive_ext: tar.gz
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: linux-x86_64
+            archive_ext: tar.gz
 
-            - target: aarch64-unknown-linux-gnu
-              os: ubuntu-24.04-arm
-              name: linux-arm
-              archive_ext: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            name: linux-arm
+            archive_ext: tar.gz
 
-            - target: aarch64-apple-darwin
-              os: macos-latest
-              name: darwin-aarch64
-              archive_ext: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: darwin-aarch64
+            archive_ext: tar.gz
 
-            - target: x86_64-apple-darwin
-              os: macos-15-intel
-              name: darwin-x86_64
-              archive_ext: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            name: darwin-x86_64
+            archive_ext: tar.gz
 
-            - target: x86_64-pc-windows-msvc
-              os: windows-latest
-              name: windows-x86_64
-              archive_ext: zip
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x86_64
+            archive_ext: zip
 
-            - target: aarch64-pc-windows-msvc
-              os: windows-11-arm
-              name: windows-arm
-              archive_ext: zip
-       
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            name: windows-arm
+            archive_ext: zip
 
     runs-on: ${{ matrix.os }}
 
@@ -93,20 +71,19 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build release
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --release --target "${{ matrix.target }}"
+          cargo build --release --locked --target "${{ matrix.target }}"
 
       - name: Package
         id: package
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/}"
           TARGET_DIR="target/${{ matrix.target }}/release"
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
@@ -138,9 +115,11 @@ jobs:
           retention-days: 7
 
   release:
-    name: Create release
-    needs: [changelog, build]
+    name: Upload release assets
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
@@ -151,13 +130,10 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f -maxdepth 2 \( -name "*.tar.gz" -o -name "*.zip" \)
 
-      - name: Create GitHub Release
+      - name: Upload assets to GitHub Release
         uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag'
         with:
-          body: ${{ needs.changelog.outputs.content }}
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             artifacts/**/*.tar.gz
             artifacts/**/*.zip
