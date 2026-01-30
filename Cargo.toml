@@ -16,6 +16,11 @@ infer = "0.19.0"
 futures-util = "0.3.31"
 indicatif = "0.18.3"
 tokio = { version = "1.49.0", features = ['macros', 'rt-multi-thread', 'io-util'] } 
+sha2 = "0.10.9"
+hex = "0.4.3"
+tar = "0.4.44"
+flate2 = "1.1.8"
+zip = { version = "7.2.0", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
