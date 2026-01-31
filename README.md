@@ -1,6 +1,9 @@
 # Twitter CLI
 > Tweet without going to twitter.com
 
+
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/StanleyMasinde/twitter/total)
+
 ## What it does
 I love creating content on Twitter but twitter.com leads to doomscrolling. This is my way of fighting that.
 
