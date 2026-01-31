@@ -3,6 +3,7 @@
 
 
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/StanleyMasinde/twitter/total)
+[![Build and test](https://github.com/StanleyMasinde/twitter/actions/workflows/rust.yml/badge.svg)](https://github.com/StanleyMasinde/twitter/actions/workflows/rust.yml)
 
 ## What it does
 I love creating content on Twitter but twitter.com leads to doomscrolling. This is my way of fighting that.
