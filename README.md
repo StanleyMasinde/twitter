@@ -53,7 +53,7 @@ On Windows, run:
 ```powershell
 twitter update
 ```
-`twitter update` replaces the current `twitter.exe` location. Run an elevated terminal only if the executable is in a protected directory (for example `C:\Program Files`).
+`twitter update` schedules replacement of the current `twitter.exe` after the running process exits. Run an elevated terminal only if the executable is in a protected directory (for example `C:\Program Files`).
 
 ### ArchLinux
 ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
