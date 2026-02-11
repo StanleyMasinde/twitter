@@ -19,6 +19,12 @@ use crate::utils::gracefully_exit;
 
 const REPO: &str = "StanleyMasinde/twitter";
 
+enum InstallOutcome {
+    Immediate,
+    #[cfg(windows)]
+    Deferred,
+}
+
 pub async fn run() {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
@@ -124,26 +130,14 @@ pub async fn run() {
     };
 
     let target_path = resolve_install_path(binary_name);
-    if let Err(err) = install_binary(&extracted, &target_path) {
-        let message = format!(
-            "Failed to update.\nTarget: {}\nReason: {}",
-            target_path.display(),
-            err
-        );
-        gracefully_exit(&message)
-    }
-
-    let version = match Command::new(&target_path).arg("--version").output() {
-        Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if stdout.is_empty() {
-                "unknown".to_string()
-            } else {
-                stdout
-            }
-        }
+    let outcome = match install_binary(&extracted, &target_path) {
+        Ok(outcome) => outcome,
         Err(err) => {
-            let message = format!("Could not get the new version name: {}", err);
+            let message = format!(
+                "Failed to update.\nTarget: {}\nReason: {}",
+                target_path.display(),
+                err
+            );
             gracefully_exit(&message)
         }
     };
@@ -151,7 +145,30 @@ pub async fn run() {
     println!("> Cleaning up");
     let _ = fs::remove_dir_all(&work_dir).await;
 
-    println!("> Updated to {}", version);
+    match outcome {
+        InstallOutcome::Immediate => {
+            let version = match Command::new(&target_path).arg("--version").output() {
+                Ok(output) => {
+                    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if stdout.is_empty() {
+                        "unknown".to_string()
+                    } else {
+                        stdout
+                    }
+                }
+                Err(err) => {
+                    let message = format!("Could not get the new version name: {}", err);
+                    gracefully_exit(&message)
+                }
+            };
+            println!("> Updated to {}", version);
+        }
+        #[cfg(windows)]
+        InstallOutcome::Deferred => {
+            println!("> Update scheduled for completion after this process exits");
+            println!("> Run `twitter --version` in a new terminal to verify");
+        }
+    }
 }
 
 fn normalize_arch(arch: &str) -> Option<&'static str> {
@@ -374,7 +391,7 @@ fn resolve_install_path(binary_name: &str) -> PathBuf {
     PathBuf::from("/usr/local/bin").join(binary_name)
 }
 
-fn install_binary(source: &Path, target: &Path) -> io::Result<()> {
+fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
     let target_dir = target
         .parent()
         .ok_or_else(|| io::Error::other("Invalid target path"))?;
@@ -408,18 +425,41 @@ fn install_binary(source: &Path, target: &Path) -> io::Result<()> {
 
     #[cfg(windows)]
     {
-        if target.exists() {
-            std::fs::remove_file(target)?;
-        }
-        std::fs::copy(&temp_target, target)?;
-        std::fs::remove_file(&temp_target)?;
-        return Ok(());
+        schedule_windows_replace(&temp_target, target)?;
+        return Ok(InstallOutcome::Deferred);
     }
 
     #[cfg(not(windows))]
     {
         std::fs::rename(&temp_target, target)?;
+        return Ok(InstallOutcome::Immediate);
     }
+}
 
-    Ok(())
+#[cfg(windows)]
+fn schedule_windows_replace(source: &Path, target: &Path) -> io::Result<()> {
+    let source = ps_single_quoted(source);
+    let target = ps_single_quoted(target);
+    let script = format!(
+        "$src='{source}';$dst='{target}';for($i=0;$i -lt 120;$i++){{try{{Move-Item -LiteralPath $src -Destination $dst -Force;exit 0}}catch{{Start-Sleep -Milliseconds 250}}}};exit 1"
+    );
+
+    Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            &script,
+        ])
+        .spawn()
+        .map(|_| ())
+}
+
+#[cfg(windows)]
+fn ps_single_quoted(path: &Path) -> String {
+    path.to_string_lossy().replace('\'', "''")
 }

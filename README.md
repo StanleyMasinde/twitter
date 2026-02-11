@@ -42,8 +42,18 @@ curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install
 
 ### Updating
 ```shell
+sudo twitter update
+```
+`twitter update` downloads the latest release, writes a temporary binary in the install directory, then atomically replaces the current executable.  
+If `twitter` is installed in `/usr/local/bin` (default install location), that directory is root-owned, so updating requires elevated privileges.
+
+If you installed to a user-writable location (for example with `TWITTER_INSTALL=~/.local/bin`), `sudo` is not required.
+
+On Windows, run:
+```powershell
 twitter update
 ```
+`twitter update` schedules replacement of the current `twitter.exe` after the running process exits. Run an elevated terminal only if the executable is in a protected directory (for example `C:\Program Files`).
 
 ### ArchLinux
 ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
@@ -59,7 +69,7 @@ After installation the executable is available as `twitter`
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
 ### Windows x64 Via PowerShell
-> Run the Windows terminal as Administrator. 
+> Administrator privileges are only needed when writing to a protected directory.
 > Ensure your default shell is PowerShell. If you are not sure, search for PowerShell and run it.
 ```powershell
 # Download and extract
