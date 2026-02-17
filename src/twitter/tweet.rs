@@ -1,3 +1,6 @@
+use std::fmt::Error;
+use std::str::FromStr;
+
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
 use crate::utils::load_config;
 use oauth::{HMAC_SHA1, Token};
@@ -16,6 +19,18 @@ pub struct TweetBody {
     pub reply: Option<Reply>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub media: Option<Media>,
+}
+
+impl FromStr for TweetBody {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            text: Some(s.to_owned()),
+            reply: None,
+            media: None,
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize)]

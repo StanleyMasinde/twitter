@@ -67,6 +67,17 @@ enum Commands {
 
     /// Self update
     Update {},
+
+    /// Schedule Tweets
+    Schedule {
+        /// The body of the tweet
+        #[arg(long)]
+        body: String,
+
+        /// When the tweet will be sent
+        #[arg(long)]
+        on: String,
+    },
 }
 
 pub async fn run() {
@@ -168,5 +179,6 @@ pub async fn run() {
         }
         Commands::Usage {} => usage::show().await,
         Commands::Update {} => update::run().await,
+        Commands::Schedule { body, on } => {},
     }
 }
