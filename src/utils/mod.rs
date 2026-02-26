@@ -102,7 +102,7 @@ pub(crate) async fn send_due_tweets() {
         let mut tweet = Tweet::from_str(&due_tweet.body).unwrap();
         let api_res = tweet.create().await;
         match api_res {
-            Ok(res) => println!("{}", res.content.to_string()),
+            Ok(res) => println!("{}", res.content),
             Err(err) => {
                 // We mark this as failed.
                 // For now let us just log this

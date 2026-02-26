@@ -432,7 +432,7 @@ fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
     #[cfg(not(windows))]
     {
         std::fs::rename(&temp_target, target)?;
-        return Ok(InstallOutcome::Immediate);
+        Ok(InstallOutcome::Immediate)
     }
 }
 

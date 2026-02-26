@@ -65,7 +65,7 @@ impl<'t> FromStr for Tweet<'t> {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let client = Client::default();
         Ok(Self {
-            client: client,
+            client,
             previous_tweet: None,
             separator: "---",
             payload: TweetBody {

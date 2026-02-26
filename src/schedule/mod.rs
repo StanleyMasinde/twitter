@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use jiff::{Timestamp, Zoned, civil::DateTime};
+use jiff::Timestamp;
 use parse_datetime::parse_datetime;
 use rusqlite::{Connection, types::FromSql};
 
@@ -55,7 +55,7 @@ pub struct ScheduledTweet {
 
 pub struct Schedule {
     tweet_body: TweetBody,
-    send_time: Zoned,
+    send_time: Timestamp,
     connection: Connection,
 }
 
@@ -75,7 +75,8 @@ impl Default for Schedule {
 impl Schedule {
     pub fn new(body: &str, time: &str) -> Self {
         let tweet_body = TweetBody::from_str(body).unwrap();
-        let send_time = parse_datetime(time).unwrap();
+        let zone_local_time = parse_datetime(time).unwrap();
+        let send_time = zone_local_time.timestamp();
         let cli_data_dir = dirs::data_dir().unwrap().join(CACHE_DIR);
         let path = cli_data_dir.join(DB_FILENAME);
         let connection = Connection::open(path).unwrap();
@@ -121,10 +122,7 @@ impl Schedule {
             ",
         );
         self.connection
-            .execute(
-                &query,
-                (self.tweet_body.text, self.send_time.datetime().to_string()),
-            )
+            .execute(&query, (self.tweet_body.text, self.send_time.to_string()))
             .unwrap();
     }
 
@@ -162,7 +160,8 @@ impl Schedule {
     }
 
     pub(crate) fn due(&self) -> Vec<ScheduledTweet> {
-        let query = format!("SELECT * from {TABLE_NAME} WHERE datetime('now') > scheduled_for");
+        let query =
+            format!("SELECT * from {TABLE_NAME} WHERE datetime('now') > datetime(scheduled_for)");
 
         let mut stmt = self.connection.prepare(&query).unwrap();
         let rows = stmt
