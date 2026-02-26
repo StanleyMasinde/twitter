@@ -4,6 +4,7 @@ use std::str::FromStr;
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
 use crate::utils::load_config;
 use oauth::{HMAC_SHA1, Token};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -56,6 +57,25 @@ pub struct Tweet<'t> {
     separator: &'t str,
     payload: TweetBody,
     tweet_parts: Vec<String>,
+}
+
+impl<'t> FromStr for Tweet<'t> {
+    type Err = CreateTweetErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let client = Client::default();
+        Ok(Self {
+            client: client,
+            previous_tweet: None,
+            separator: "---",
+            payload: TweetBody {
+                text: Some(s.to_string()),
+                reply: None,
+                media: None,
+            },
+            tweet_parts: vec![],
+        })
+    }
 }
 
 impl<'t> Tweet<'t> {

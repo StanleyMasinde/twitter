@@ -8,7 +8,11 @@ use std::{
 
 use dirs::home_dir;
 
-use crate::config::Config;
+use crate::{
+    config::Config,
+    schedule::Schedule,
+    twitter::tweet::{Tweet, TwitterApi},
+};
 
 pub fn load_config() -> Config {
     let config_dir = home_dir()
@@ -88,4 +92,23 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
 pub(crate) fn gracefully_exit(message: &str) -> ! {
     println!("{message}");
     process::exit(1)
+}
+
+pub(crate) async fn send_due_tweets() {
+    let schedule = Schedule::default();
+    let due_tweets = schedule.due();
+    for (index, due_tweet) in due_tweets.iter().enumerate() {
+        println!("> Sending tweet {}/{}", index, due_tweets.len());
+        let mut tweet = Tweet::from_str(&due_tweet.body).unwrap();
+        let api_res = tweet.create().await;
+        match api_res {
+            Ok(res) => println!("{}", res.content.to_string()),
+            Err(err) => {
+                // We mark this as failed.
+                // For now let us just log this
+
+                eprintln!("{}", err.message)
+            }
+        }
+    }
 }

@@ -8,8 +8,10 @@ use std::{
     path::PathBuf,
 };
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use tabled::builder::Builder;
 
+use crate::{schedule, utils::send_due_tweets};
 use crate::{
     twitter::{
         self,
@@ -70,14 +72,44 @@ enum Commands {
 
     /// Schedule Tweets
     Schedule {
-        /// The body of the tweet
+        #[command(subcommand)]
+        command: ScheduleEnum,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum ScheduleEnum {
+    /// Add a new tweet to the Schedule
+    New {
+        /// The body of the new tweet
         #[arg(long)]
         body: String,
 
-        /// When the tweet will be sent
+        /// The time to send the tweet
         #[arg(long)]
         on: String,
     },
+
+    /// List all the scheduled tweets
+    List(ListArgs),
+    /// Clear all the scheduled tweets
+    Clear {},
+
+    /// Send all the ready to send tweets
+    Send {},
+}
+
+#[derive(Debug, clap::Args)]
+struct ListArgs {
+    #[arg(long, value_enum, default_value_t = ListFilter::All)]
+    filter: ListFilter,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum ListFilter {
+    All,
+    Failed,
+    Sent,
 }
 
 pub async fn run() {
@@ -179,6 +211,34 @@ pub async fn run() {
         }
         Commands::Usage {} => usage::show().await,
         Commands::Update {} => update::run().await,
-        Commands::Schedule { body, on } => {},
+        Commands::Schedule { command } => match command {
+            ScheduleEnum::New { body, on } => {
+                let schedule = schedule::Schedule::new(&body, &on);
+                schedule.save();
+            }
+            ScheduleEnum::Clear {} => {
+                let schedule = schedule::Schedule::default();
+                schedule.clear();
+            }
+            ScheduleEnum::Send {} => {
+                send_due_tweets().await;
+            }
+            ScheduleEnum::List(list_args) => {
+                let schedule = schedule::Schedule::default();
+                let mut table_builder = Builder::new();
+                let tweets = match list_args.filter {
+                    ListFilter::All => schedule.all(),
+                    ListFilter::Failed => schedule.failed(),
+                    ListFilter::Sent => schedule.sent(),
+                };
+                table_builder.push_record(["Id", "Body", "Send time"]);
+                for row in tweets {
+                    table_builder.push_record([row.id.to_string(), row.body, row.scheduled_for]);
+                }
+
+                let table = table_builder.build();
+                println!("{table}")
+            }
+        },
     }
 }

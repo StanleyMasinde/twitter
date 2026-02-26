@@ -1,6 +1,6 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
-use jiff::Zoned;
+use jiff::{Timestamp, Zoned, civil::DateTime};
 use parse_datetime::parse_datetime;
 use rusqlite::{Connection, types::FromSql};
 
@@ -11,10 +11,21 @@ const DB_FILENAME: &str = "db.sqlite3";
 use crate::twitter::tweet::TweetBody;
 
 #[derive(Debug)]
-enum ScheduleStatus {
+pub enum ScheduleStatus {
     Pending,
     Sent,
     Failed,
+}
+
+impl Display for ScheduleStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            ScheduleStatus::Pending => "Pending",
+            ScheduleStatus::Sent => "Sent",
+            ScheduleStatus::Failed => "Failed",
+        };
+        write!(f, "{text}")
+    }
 }
 
 impl FromSql for ScheduleStatus {
@@ -22,7 +33,7 @@ impl FromSql for ScheduleStatus {
         let val = match value.as_str().unwrap() {
             "pending" => ScheduleStatus::Pending,
             "sent" => ScheduleStatus::Sent,
-            "Failed" => ScheduleStatus::Failed,
+            "failed" => ScheduleStatus::Failed,
             _ => ScheduleStatus::Pending,
         };
         Ok(val)
@@ -30,16 +41,16 @@ impl FromSql for ScheduleStatus {
 }
 
 #[derive(Debug)]
-struct ScheduledTweet {
-    id: u32,
-    body: String,
-    status: ScheduleStatus,
-    scheduled_for: String,
-    attempts: u32,
-    last_error: Option<String>,
-    sent_at: Option<String>,
-    created_at: String,
-    updated_at: String,
+pub struct ScheduledTweet {
+    pub id: u32,
+    pub body: String,
+    pub status: ScheduleStatus,
+    pub scheduled_for: String,
+    pub attempts: u32,
+    pub last_error: Option<String>,
+    pub sent_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 pub struct Schedule {
@@ -100,7 +111,7 @@ impl Schedule {
         }
     }
 
-    fn save(self) {
+    pub fn save(self) {
         let query = format!(
             "
             INSERT INTO {TABLE_NAME} (
@@ -117,30 +128,7 @@ impl Schedule {
             .unwrap();
     }
 
-    fn get(self, id: u32) -> ScheduledTweet {
-        let query = format!("SELECT * from {TABLE_NAME} where id = ?1");
-        let mut stmt = self.connection.prepare(&query).unwrap();
-
-        let tweet: ScheduledTweet = stmt
-            .query_one(((id),), |row| {
-                Ok(ScheduledTweet {
-                    id: row.get(0).unwrap(),
-                    body: row.get(1).unwrap(),
-                    status: row.get(2).unwrap(),
-                    scheduled_for: row.get(3).unwrap(),
-                    attempts: row.get(4).unwrap(),
-                    last_error: row.get(5).unwrap(),
-                    sent_at: row.get(6).unwrap(),
-                    created_at: row.get(7).unwrap(),
-                    updated_at: row.get(8).unwrap(),
-                })
-            })
-            .unwrap();
-
-        tweet
-    }
-
-    fn all(self) -> Vec<ScheduledTweet> {
+    pub fn all(self) -> Vec<ScheduledTweet> {
         let query = format!("SELECT * from {TABLE_NAME}");
         let mut stmt = self.connection.prepare(&query).unwrap();
         let rows = stmt
@@ -168,16 +156,51 @@ impl Schedule {
         tweets
     }
 
-    fn clear(self) {
+    pub fn clear(self) {
         let query = format!("DELETE FROM {TABLE_NAME}");
         self.connection.execute(&query, ()).unwrap();
+    }
+
+    pub(crate) fn due(&self) -> Vec<ScheduledTweet> {
+        let query = format!("SELECT * from {TABLE_NAME} WHERE datetime('now') > scheduled_for");
+
+        let mut stmt = self.connection.prepare(&query).unwrap();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(ScheduledTweet {
+                    id: row.get(0).unwrap(),
+                    body: row.get(1).unwrap(),
+                    status: row.get(2).unwrap(),
+                    scheduled_for: row.get(3).unwrap(),
+                    attempts: row.get(4).unwrap(),
+                    last_error: row.get(5).unwrap(),
+                    sent_at: row.get(6).unwrap(),
+                    created_at: row.get(7).unwrap(),
+                    updated_at: row.get(8).unwrap(),
+                })
+            })
+            .unwrap();
+
+        let mut tweets: Vec<ScheduledTweet> = vec![];
+
+        for row in rows {
+            tweets.push(row.unwrap());
+        }
+
+        tweets
+    }
+
+    pub(crate) fn failed(&self) -> Vec<ScheduledTweet> {
+        todo!()
+    }
+
+    pub(crate) fn sent(&self) -> Vec<ScheduledTweet> {
+        todo!()
     }
 }
 
 #[cfg(test)]
 mod test {
-
-    use serial_test::serial;
 
     use crate::schedule::Schedule;
 
@@ -190,14 +213,6 @@ mod test {
     }
 
     #[test]
-    fn schedule_get_tweet() {
-        let schedule_instance = Schedule::default();
-
-        let tweet_row = schedule_instance.get(1);
-        println!("{:?}", tweet_row);
-    }
-
-    #[test]
     fn schedule_get_all() {
         let schedule_instance = Schedule::default();
         let all = schedule_instance.all();
@@ -205,12 +220,12 @@ mod test {
     }
 
     // #[test]
-    fn schedule_clear() {
-        let delete_instance = Schedule::default();
-        delete_instance.clear();
+    // fn schedule_clear() {
+    // let delete_instance = Schedule::default();
+    // delete_instance.clear();
 
-        let all_instance = Schedule::default();
-        let all = all_instance.all();
-        println!("{:?}", all)
-    }
+    // let all_instance = Schedule::default();
+    // let all = all_instance.all();
+    // println!("{:?}", all)
+    // }
 }
