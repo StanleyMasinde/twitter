@@ -11,8 +11,11 @@ env:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
@@ -20,5 +23,14 @@ jobs:
       uses: Swatinem/rust-cache@v2.8.0
     - name: Build
       run: cargo build
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.8.0
     - name: Run tests
       run: cargo test

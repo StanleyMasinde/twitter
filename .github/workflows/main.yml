@@ -75,7 +75,7 @@ jobs:
             target
           key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install SQLite via vcpkg (Windows)
+      - name: Install native deps via vcpkg (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -88,9 +88,9 @@ jobs:
             throw "vcpkg.exe not found at $vcpkgExe"
           }
 
-          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}"
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
           if ($LASTEXITCODE -ne 0) {
-            throw "Failed to install sqlite3 with vcpkg."
+            throw "Failed to install sqlite3/curl with vcpkg."
           }
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
@@ -101,6 +101,16 @@ jobs:
         run: |
           set -euo pipefail
           cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Smoke test binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe"
+          if (-not (Test-Path $bin)) {
+            throw "Binary missing: $bin"
+          }
+          & $bin --version
 
       - name: Package
         id: package
