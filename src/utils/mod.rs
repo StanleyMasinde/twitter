@@ -98,7 +98,7 @@ pub(crate) async fn send_due_tweets() {
     let schedule = Schedule::default();
     let due_tweets = schedule.due();
     if due_tweets.is_empty() {
-        println!("No pending scheduled tweets to send.");
+        println!("No pending scheduled tweets to run.");
         return;
     }
 

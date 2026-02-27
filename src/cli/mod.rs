@@ -86,7 +86,7 @@ enum ScheduleEnum {
         body: String,
 
         /// The time to send the tweet
-        #[arg(long)]
+        #[arg(long, visible_alias = "at")]
         on: String,
     },
 
@@ -95,8 +95,8 @@ enum ScheduleEnum {
     /// Clear all the scheduled tweets
     Clear {},
 
-    /// Send all the ready to send tweets
-    Send {},
+    /// Run all ready-to-send scheduled tweets
+    Run {},
 }
 
 #[derive(Debug, clap::Args)]
@@ -217,7 +217,7 @@ pub async fn run() {
                 if schedule.save() {
                     println!("Tweet scheduled for {on}.");
                 } else {
-                    eprintln!("Unable to schedule tweet.");
+                    eprintln!("Could not schedule tweet.");
                 }
             }
             ScheduleEnum::Clear {} => {
@@ -226,7 +226,7 @@ pub async fn run() {
                 let suffix = if cleared == 1 { "" } else { "s" };
                 println!("Cleared {cleared} scheduled tweet{suffix}.");
             }
-            ScheduleEnum::Send {} => {
+            ScheduleEnum::Run {} => {
                 send_due_tweets().await;
             }
             ScheduleEnum::List(list_args) => {
@@ -238,7 +238,7 @@ pub async fn run() {
                     ListFilter::Sent => schedule.sent(),
                 };
                 if tweets.is_empty() {
-                    println!("No scheduled tweets found.");
+                    println!("No scheduled tweets were found.");
                     return;
                 }
                 table_builder.push_record(["Id", "Body", "Send time"]);
