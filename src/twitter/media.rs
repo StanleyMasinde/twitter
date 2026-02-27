@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use oauth::{HMAC_SHA1, Token};
 use serde::Deserialize;
@@ -50,12 +53,8 @@ pub fn upload(path: PathBuf) -> Result<String, UploadMediaError> {
         .unwrap_or("image.bin")
         .to_string();
 
-    let media_bytes = std::fs::read(path).map_err(|err| UploadMediaError {
-        message: err.to_string(),
-    })?;
-
     let boundary = format!("----twitter-cli-{}", std::process::id());
-    let body = build_multipart_body(&boundary, &file_name, &media_type, &media_bytes);
+    let body = build_multipart_body(&boundary, &file_name, &media_type, &path)?;
     let content_type = format!("multipart/form-data; boundary={boundary}");
 
     let response = curl_rest::Client::default()
@@ -88,9 +87,12 @@ fn build_multipart_body(
     boundary: &str,
     file_name: &str,
     media_type: &str,
-    media_bytes: &[u8],
-) -> Vec<u8> {
-    let mut body = Vec::new();
+    file_path: &Path,
+) -> Result<Vec<u8>, UploadMediaError> {
+    let file_size = std::fs::metadata(file_path)
+        .map(|meta| meta.len() as usize)
+        .unwrap_or(0);
+    let mut body = Vec::with_capacity(file_size + 512);
 
     let write_text_part = |body: &mut Vec<u8>, name: &str, value: &str| {
         body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
@@ -110,9 +112,14 @@ fn build_multipart_body(
             .as_bytes(),
     );
     body.extend_from_slice(format!("Content-Type: {media_type}\r\n\r\n").as_bytes());
-    body.extend_from_slice(media_bytes);
+    let mut file = std::fs::File::open(file_path).map_err(|err| UploadMediaError {
+        message: err.to_string(),
+    })?;
+    file.read_to_end(&mut body).map_err(|err| UploadMediaError {
+        message: err.to_string(),
+    })?;
     body.extend_from_slice(b"\r\n");
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
 
-    body
+    Ok(body)
 }
