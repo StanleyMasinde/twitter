@@ -115,9 +115,10 @@ fn build_multipart_body(
     let mut file = std::fs::File::open(file_path).map_err(|err| UploadMediaError {
         message: err.to_string(),
     })?;
-    file.read_to_end(&mut body).map_err(|err| UploadMediaError {
-        message: err.to_string(),
-    })?;
+    file.read_to_end(&mut body)
+        .map_err(|err| UploadMediaError {
+            message: err.to_string(),
+        })?;
     body.extend_from_slice(b"\r\n");
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
 
