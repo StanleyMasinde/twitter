@@ -232,7 +232,8 @@ pub async fn run() {
             ScheduleEnum::List(list_args) => {
                 let schedule = schedule::Schedule::default();
                 let mut table_builder = Builder::new();
-                let tweets = match list_args.filter {
+                let filter = list_args.filter.clone();
+                let mut tweets = match filter {
                     ListFilter::All => schedule.all(),
                     ListFilter::Failed => schedule.failed(),
                     ListFilter::Sent => schedule.sent(),
@@ -241,13 +242,77 @@ pub async fn run() {
                     println!("No scheduled tweets were found.");
                     return;
                 }
-                table_builder.push_record(["Id", "Body", "Send time"]);
-                for row in tweets {
-                    table_builder.push_record([row.id.to_string(), row.body, row.scheduled_for]);
+
+                tweets.sort_by(|a, b| a.scheduled_for.cmp(&b.scheduled_for));
+
+                let show_last_error = matches!(filter, ListFilter::All | ListFilter::Failed);
+                let show_sent_at = matches!(filter, ListFilter::All | ListFilter::Sent);
+
+                let mut headers = vec![
+                    "Id".to_string(),
+                    "Status".to_string(),
+                    "Body".to_string(),
+                    "Send time".to_string(),
+                    "Attempts".to_string(),
+                ];
+
+                if show_last_error {
+                    headers.push("Last error".to_string());
+                }
+
+                if show_sent_at {
+                    headers.push("Sent at".to_string());
+                }
+
+                table_builder.push_record(headers);
+
+                for row in &tweets {
+                    let mut record = vec![
+                        row.id.to_string(),
+                        row.status.to_string(),
+                        if row.body.chars().count() > 80 {
+                            format!("{}...", row.body.chars().take(77).collect::<String>())
+                        } else {
+                            row.body.clone()
+                        },
+                        row.scheduled_for.clone(),
+                        row.attempts.to_string(),
+                    ];
+                    if show_last_error {
+                        record.push(row.last_error.clone().unwrap_or_else(|| "-".to_string()));
+                    }
+                    if show_sent_at {
+                        record.push(row.sent_at.clone().unwrap_or_else(|| "-".to_string()));
+                    }
+                    table_builder.push_record(record);
                 }
 
                 let table = table_builder.build();
                 println!("{table}");
+
+                if matches!(filter, ListFilter::All) {
+                    let pending = tweets
+                        .iter()
+                        .filter(|row| matches!(row.status, schedule::ScheduleStatus::Pending))
+                        .count();
+                    let failed = tweets
+                        .iter()
+                        .filter(|row| matches!(row.status, schedule::ScheduleStatus::Failed))
+                        .count();
+                    let sent = tweets
+                        .iter()
+                        .filter(|row| matches!(row.status, schedule::ScheduleStatus::Sent))
+                        .count();
+                    println!(
+                        "Total: {} (Pending: {}, Failed: {}, Sent: {})",
+                        tweets.len(),
+                        pending,
+                        failed,
+                        sent
+                    );
+                } else {
+                    println!("Total: {}", tweets.len());
+                }
             }
         },
     }
