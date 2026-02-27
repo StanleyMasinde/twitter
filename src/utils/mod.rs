@@ -98,16 +98,27 @@ pub(crate) async fn send_due_tweets() {
     let schedule = Schedule::default();
     let due_tweets = schedule.due();
     for (index, due_tweet) in due_tweets.iter().enumerate() {
-        println!("> Sending tweet {}/{}", index, due_tweets.len());
-        let mut tweet = Tweet::from_str(&due_tweet.body).unwrap();
+        println!("> Sending tweet {}/{}", index + 1, due_tweets.len());
+        let mut tweet = match Tweet::from_str(&due_tweet.body) {
+            Ok(tweet) => tweet,
+            Err(err) => {
+                eprintln!(
+                    "Failed to build tweet payload for schedule id {}: {}",
+                    due_tweet.id, err.message
+                );
+                schedule.mark_failed(due_tweet.id, &err.message);
+                continue;
+            }
+        };
         let api_res = tweet.create().await;
         match api_res {
-            Ok(res) => println!("{}", res.content),
+            Ok(res) => {
+                println!("{}", res.content);
+                schedule.mark_sent(due_tweet.id);
+            }
             Err(err) => {
-                // We mark this as failed.
-                // For now let us just log this
-
-                eprintln!("{}", err.message)
+                eprintln!("{}", err.message);
+                schedule.mark_failed(due_tweet.id, &err.message);
             }
         }
     }
