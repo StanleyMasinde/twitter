@@ -112,7 +112,7 @@ enum ListFilter {
     Sent,
 }
 
-pub async fn run() {
+pub fn run() {
     let args = Args::parse();
 
     match args.command {
@@ -121,11 +121,10 @@ pub async fn run() {
             image,
             editor,
         } => {
-            let client = reqwest::Client::new();
             let mut media_id: Option<String> = None;
 
             if let Some(image_path) = image {
-                let upload_result = twitter::media::upload(client.clone(), image_path).await;
+                let upload_result = twitter::media::upload(image_path);
                 media_id = match upload_result {
                     Ok(media) => Some(media),
                     Err(err) => gracefully_exit(&err.message),
@@ -181,8 +180,8 @@ pub async fn run() {
                 };
                 payload.media = Some(media_body);
             }
-            let mut tweet = tweet::Tweet::new(client, payload);
-            let api_res = tweet.create().await;
+            let mut tweet = tweet::Tweet::new(payload);
+            let api_res = tweet.create();
 
             match api_res {
                 Ok(ok) => {
@@ -209,8 +208,8 @@ pub async fn run() {
                 Args::parse_from(["", "config", "--help"]);
             }
         }
-        Commands::Usage {} => usage::show().await,
-        Commands::Update {} => update::run().await,
+        Commands::Usage {} => usage::show(),
+        Commands::Update {} => update::run(),
         Commands::Schedule { command } => match command {
             ScheduleEnum::New { body, on } => {
                 let schedule = schedule::Schedule::new(&body, &on);
@@ -227,7 +226,7 @@ pub async fn run() {
                 println!("Cleared {cleared} scheduled tweet{suffix}.");
             }
             ScheduleEnum::Run {} => {
-                send_due_tweets().await;
+                send_due_tweets();
             }
             ScheduleEnum::List(list_args) => {
                 let schedule = schedule::Schedule::default();

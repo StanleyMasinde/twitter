@@ -1,5 +1,4 @@
 use crate::utils::load_config;
-use reqwest::StatusCode;
 use serde::Deserialize;
 use std::fmt::Display;
 
@@ -24,27 +23,31 @@ impl Display for OkResponse {
     }
 }
 
-pub async fn show() {
+pub fn show() {
     let mut cfg = load_config();
     let account = cfg.current_account();
     let token = account.bearer_token.as_str();
     let auth_header = format!("Bearer {}", token);
-    let client = reqwest::Client::new();
-    let response = client
-        .get("https://api.x.com/2/usage/tweets")
-        .query(&[("days", 1)])
-        .header(reqwest::header::AUTHORIZATION, &auth_header)
-        .send()
-        .await
-        .unwrap();
-    let status = response.status();
 
-    let response_text = response.text().await.unwrap();
-    if status.is_success() {
+    let response = match curl_rest::Client::default()
+        .get()
+        .query_param_kv("days", "1")
+        .header(curl_rest::Header::Authorization(auth_header.into()))
+        .send("https://api.x.com/2/usage/tweets")
+    {
+        Ok(response) => response,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+
+    let response_text = String::from_utf8_lossy(&response.body).to_string();
+    if (200..300).contains(&response.status.as_u16()) {
         let usage: OkResponse = serde_json::from_str(&response_text).unwrap();
 
         println!("{}", usage);
-    } else if status == StatusCode::from_u16(429).unwrap() {
+    } else if response.status.as_u16() == 429 {
         eprintln!("You have reached a rate limit. Try again later.")
     } else {
         eprintln!("{}", response_text)

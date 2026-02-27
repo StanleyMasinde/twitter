@@ -4,7 +4,6 @@ use std::str::FromStr;
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
 use crate::utils::load_config;
 use oauth::{HMAC_SHA1, Token};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -45,14 +44,11 @@ pub struct Media {
 }
 
 pub trait TwitterApi {
-    fn create(
-        &mut self,
-    ) -> impl Future<Output = Result<Response<TweetCreateResponse>, CreateTweetErr>>;
+    fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr>;
 }
 
 #[derive(Default)]
 pub struct Tweet<'t> {
-    client: reqwest::Client,
     previous_tweet: Option<String>,
     separator: &'t str,
     payload: TweetBody,
@@ -63,9 +59,7 @@ impl<'t> FromStr for Tweet<'t> {
     type Err = CreateTweetErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let client = Client::default();
         Ok(Self {
-            client,
             previous_tweet: None,
             separator: "---",
             payload: TweetBody {
@@ -79,9 +73,8 @@ impl<'t> FromStr for Tweet<'t> {
 }
 
 impl<'t> Tweet<'t> {
-    pub fn new(client: reqwest::Client, payload: TweetBody) -> Self {
+    pub fn new(payload: TweetBody) -> Self {
         Self {
-            client,
             previous_tweet: None,
             separator: "---",
             payload,
@@ -102,7 +95,7 @@ impl<'t> Tweet<'t> {
             .collect()
     }
 
-    async fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
+    fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
         let mut cfg = load_config();
         let current_account = cfg.current_account();
         let token = Token::from_parts(
@@ -137,38 +130,34 @@ impl<'t> Tweet<'t> {
             media,
         };
 
-        let response = self
-            .client
-            .post(url)
-            .header(reqwest::header::AUTHORIZATION, &auth_header)
-            .json(&new_tweet)
-            .send()
-            .await
+        let body = serde_json::to_string(&new_tweet).map_err(|e| CreateTweetErr {
+            message: e.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .post()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url)
             .map_err(|e| CreateTweetErr {
                 message: e.to_string(),
             })?;
-        let status = response.status();
 
-        if status.is_success() {
-            let bytes = response.bytes().await.map_err(|err| CreateTweetErr {
-                message: err.to_string(),
-            })?;
+        if (200..300).contains(&response.status.as_u16()) {
             let res_data: TweetCreateResponse =
-                serde_json::from_slice(&bytes).map_err(|_| CreateTweetErr {
+                serde_json::from_slice(&response.body).map_err(|_| CreateTweetErr {
                     message: "Invalid response body.".into(),
                 })?;
             Ok(res_data)
         } else {
-            let err_data = response.text().await.map_err(|e| CreateTweetErr {
-                message: format!("{:?}", e),
-            })?;
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
             Err(CreateTweetErr { message: err_data })
         }
     }
 }
 
 impl<'t> TwitterApi for Tweet<'t> {
-    async fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
+    fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
             text: "".to_string(),
@@ -191,13 +180,13 @@ impl<'t> TwitterApi for Tweet<'t> {
                     self.payload.media = None
                 }
                 println!("> Sending tweet {}/{}", index + 1, num_of_tweets);
-                let res = self.send(Some(index)).await?;
+                let res = self.send(Some(index))?;
                 let tweet_id = &res.data.id;
                 self.previous_tweet = Some(tweet_id.to_string());
                 response.content = res;
             }
         } else {
-            let res = self.send(None).await?;
+            let res = self.send(None)?;
             response.content = res;
         }
 
