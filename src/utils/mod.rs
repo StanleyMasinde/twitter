@@ -94,7 +94,7 @@ pub(crate) fn gracefully_exit(message: &str) -> ! {
     process::exit(1)
 }
 
-pub(crate) async fn send_due_tweets() {
+pub(crate) fn send_due_tweets() {
     let schedule = Schedule::default();
     let due_tweets = schedule.due();
     if due_tweets.is_empty() {
@@ -118,7 +118,7 @@ pub(crate) async fn send_due_tweets() {
                 continue;
             }
         };
-        let api_res = tweet.create().await;
+        let api_res = tweet.create();
         match api_res {
             Ok(res) => {
                 println!("{}", res.content);

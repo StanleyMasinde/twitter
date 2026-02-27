@@ -1,18 +1,13 @@
-use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
+    cell::RefCell,
     env,
     io::{self, Read, Write},
     path::{Path, PathBuf},
     process::Command,
     time::{SystemTime, UNIX_EPOCH},
-};
-use tokio::{
-    fs::{self, File},
-    io::AsyncWriteExt,
-    task,
 };
 
 use crate::utils::gracefully_exit;
@@ -25,11 +20,10 @@ enum InstallOutcome {
     Deferred,
 }
 
-pub async fn run() {
+pub fn run() {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
     let temp_dir = env::temp_dir();
-    let client = reqwest::Client::new();
 
     let os_name = match os {
         "macos" => "darwin",
@@ -63,12 +57,12 @@ pub async fn run() {
     let filename = format!("twitter-{}-{}.{}", os_name, arch_name, ext);
     let work_dir = temp_dir.join(format!("twitter-update-{}", unique_suffix()));
 
-    if let Err(err) = fs::create_dir_all(&work_dir).await {
+    if let Err(err) = std::fs::create_dir_all(&work_dir) {
         let message = format!("Failed to create temp dir: {err}");
         gracefully_exit(&message)
     }
 
-    let release_json = match fetch_release_json(&client, "latest").await {
+    let release_json = match fetch_release_json("latest") {
         Ok(json) => json,
         Err(err) => gracefully_exit(&format!("Failed to fetch release data: {err}")),
     };
@@ -89,14 +83,14 @@ pub async fn run() {
 
     println!("> Downloading {}", filename);
     let archive_path = work_dir.join(&filename);
-    if let Err(err) = download_with_progress(&client, &download_url, &archive_path).await {
+    if let Err(err) = download_with_progress(&download_url, &archive_path) {
         let message = format!("Failed to download update: {err}");
         gracefully_exit(&message)
     }
 
     if let Some(expected_sha) = digest {
         println!("> Verifying checksum");
-        match compute_sha256(&archive_path).await {
+        match compute_sha256(&archive_path) {
             Ok(actual) if actual == expected_sha => {}
             Ok(actual) => {
                 let message = format!(
@@ -116,12 +110,12 @@ pub async fn run() {
 
     println!("> Extracting");
     let extract_dir = work_dir.join("extract");
-    if let Err(err) = fs::create_dir_all(&extract_dir).await {
+    if let Err(err) = std::fs::create_dir_all(&extract_dir) {
         let message = format!("Failed to create extract dir: {err}");
         gracefully_exit(&message)
     }
 
-    let extracted = match extract_binary(&archive_path, ext, &extract_dir, binary_name).await {
+    let extracted = match extract_binary(&archive_path, ext, &extract_dir, binary_name) {
         Ok(path) => path,
         Err(err) => {
             let message = format!("Failed to extract update file: {err}");
@@ -143,7 +137,7 @@ pub async fn run() {
     };
 
     println!("> Cleaning up");
-    let _ = fs::remove_dir_all(&work_dir).await;
+    let _ = std::fs::remove_dir_all(&work_dir);
 
     match outcome {
         InstallOutcome::Immediate => {
@@ -187,10 +181,7 @@ fn unique_suffix() -> u128 {
         .unwrap_or(0)
 }
 
-async fn fetch_release_json(
-    client: &reqwest::Client,
-    version: &str,
-) -> Result<Value, reqwest::Error> {
+fn fetch_release_json(version: &str) -> Result<Value, String> {
     let url = if version == "latest" {
         format!("https://api.github.com/repos/{}/releases/latest", REPO)
     } else {
@@ -200,14 +191,21 @@ async fn fetch_release_json(
         )
     };
 
-    client
-        .get(url)
-        .header(reqwest::header::USER_AGENT, "twitter-cli")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await
+    let response = curl_rest::Client::default()
+        .get()
+        .header(curl_rest::Header::UserAgent("twitter-cli".into()))
+        .send(&url)
+        .map_err(|err| err.to_string())?;
+
+    if (200..300).contains(&response.status.as_u16()) {
+        serde_json::from_slice::<Value>(&response.body).map_err(|err| err.to_string())
+    } else {
+        Err(format!(
+            "HTTP {}: {}",
+            response.status,
+            String::from_utf8_lossy(&response.body)
+        ))
+    }
 }
 
 type FindAssetOk = (String, Option<String>, Vec<String>);
@@ -243,84 +241,96 @@ fn find_asset(release_json: &Value, filename: &str) -> Result<FindAssetOk, FindA
     Err((format!("Could not find asset '{}'", filename), available))
 }
 
-async fn download_with_progress(
-    client: &reqwest::Client,
-    url: &str,
-    dest: &Path,
-) -> Result<(), String> {
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|err| err.to_string())?
-        .error_for_status()
+fn download_with_progress(url: &str, dest: &Path) -> Result<(), String> {
+    use curl::easy::{Easy, WriteError};
+
+    let mut easy = Easy::new();
+    easy.url(url).map_err(|err| err.to_string())?;
+    easy.follow_location(true).map_err(|err| err.to_string())?;
+    easy.useragent("twitter-cli")
         .map_err(|err| err.to_string())?;
 
-    let total_size = response.content_length().unwrap_or(0);
+    let file = std::fs::File::create(dest).map_err(|err| err.to_string())?;
+    let file = RefCell::new(file);
 
-    let pb = ProgressBar::new(total_size);
+    let pb = ProgressBar::new(0);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes}",
+            )
             .unwrap()
             .progress_chars("##-"),
     );
 
-    let mut stream = response.bytes_stream();
-    let mut file = File::create(dest).await.map_err(|err| err.to_string())?;
-
-    while let Some(chunk) = stream.next().await {
-        let bytes = chunk.map_err(|err| err.to_string())?;
-        file.write_all(&bytes)
-            .await
+    {
+        let mut transfer = easy.transfer();
+        let progress_from_headers = pb.clone();
+        transfer
+            .header_function(move |header| {
+                if let Ok(line) = std::str::from_utf8(header)
+                    && let Some(value) = line.to_ascii_lowercase().strip_prefix("content-length:")
+                    && let Ok(total_size) = value.trim().parse::<u64>()
+                {
+                    progress_from_headers.set_length(total_size);
+                }
+                true
+            })
             .map_err(|err| err.to_string())?;
-        pb.inc(bytes.len() as u64);
+
+        let progress_from_body = pb.clone();
+        transfer
+            .write_function(move |data| {
+                file.borrow_mut()
+                    .write_all(data)
+                    .map_err(|_| WriteError::Pause)?;
+                progress_from_body.inc(data.len() as u64);
+                Ok(data.len())
+            })
+            .map_err(|err| err.to_string())?;
+
+        transfer.perform().map_err(|err| err.to_string())?;
+    }
+
+    let status = easy.response_code().map_err(|err| err.to_string())?;
+    if !(200..300).contains(&status) {
+        let _ = std::fs::remove_file(dest);
+        return Err(format!("HTTP {status} while downloading update"));
     }
 
     pb.finish_with_message("> Download complete");
+
     Ok(())
 }
 
-async fn compute_sha256(path: &Path) -> io::Result<String> {
-    let path = path.to_path_buf();
-    task::spawn_blocking(move || {
-        let mut file = std::fs::File::open(path)?;
-        let mut hasher = Sha256::new();
-        let mut buf = [0u8; 8192];
-        loop {
-            let read = file.read(&mut buf)?;
-            if read == 0 {
-                break;
-            }
-            hasher.update(&buf[..read]);
+fn compute_sha256(path: &Path) -> io::Result<String> {
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let read = file.read(&mut buf)?;
+        if read == 0 {
+            break;
         }
-        Ok(hex::encode(hasher.finalize()))
-    })
-    .await
-    .unwrap_or_else(|err| Err(io::Error::other(err)))
+        hasher.update(&buf[..read]);
+    }
+    Ok(hex::encode(hasher.finalize()))
 }
 
-async fn extract_binary(
+fn extract_binary(
     archive_path: &Path,
     ext: &str,
     extract_dir: &Path,
     binary_name: &str,
 ) -> io::Result<PathBuf> {
-    let archive_path = archive_path.to_path_buf();
-    let extract_dir = extract_dir.to_path_buf();
-    let binary_name = binary_name.to_string();
-    let ext = ext.to_string();
-
-    task::spawn_blocking(move || match ext.as_str() {
-        "tar.gz" => extract_from_tar_gz(&archive_path, &extract_dir, &binary_name),
-        "zip" => extract_from_zip(&archive_path, &extract_dir, &binary_name),
+    match ext {
+        "tar.gz" => extract_from_tar_gz(archive_path, extract_dir, binary_name),
+        "zip" => extract_from_zip(archive_path, extract_dir, binary_name),
         other => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("Unsupported archive type: {}", other),
         )),
-    })
-    .await
-    .unwrap_or_else(|err| Err(io::Error::other(err)))
+    }
 }
 
 fn extract_from_tar_gz(

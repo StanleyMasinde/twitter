@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use oauth::{HMAC_SHA1, Token};
-use reqwest::multipart;
 use serde::Deserialize;
 
 use crate::utils::load_config;
@@ -21,7 +20,7 @@ pub struct UploadMediaError {
     pub message: String,
 }
 
-pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, UploadMediaError> {
+pub fn upload(path: PathBuf) -> Result<String, UploadMediaError> {
     let upload_url = "https://api.x.com/2/media/upload";
     println!("> Uploading image to Twitter.");
 
@@ -37,7 +36,7 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
     let file_kind = infer::get_from_path(&path);
 
     let media_type = match file_kind {
-        Ok(kind) => kind.unwrap().mime_type(),
+        Ok(kind) => kind.unwrap().mime_type().to_string(),
         Err(_) => {
             return Err(UploadMediaError {
                 message: "Could not get the file type.".to_string(),
@@ -45,33 +44,33 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
         }
     };
 
-    let form = multipart::Form::new()
-        .text("media_category", "tweet_image")
-        .text("media_type", media_type)
-        .file("media", path)
-        .await
-        .map_err(|err| UploadMediaError {
-            message: err.to_string(),
-        })?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image.bin")
+        .to_string();
 
-    let response = client
-        .post(upload_url)
-        .header(reqwest::header::AUTHORIZATION, &auth_header)
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|err| UploadMediaError {
-            message: err.to_string(),
-        })?;
-    let status = response.status();
-
-    let response_text = response.text().await.map_err(|err| UploadMediaError {
+    let media_bytes = std::fs::read(path).map_err(|err| UploadMediaError {
         message: err.to_string(),
     })?;
 
-    if status.is_success() {
-        let media_upload_res: MediaUploadResponse =
-            serde_json::from_str(&response_text).map_err(|err| UploadMediaError {
+    let boundary = format!("----twitter-cli-{}", std::process::id());
+    let body = build_multipart_body(&boundary, &file_name, &media_type, &media_bytes);
+    let content_type = format!("multipart/form-data; boundary={boundary}");
+
+    let response = curl_rest::Client::default()
+        .post()
+        .header(curl_rest::Header::Authorization(auth_header.into()))
+        .header(curl_rest::Header::ContentType(content_type.into()))
+        .body(curl_rest::Body::Bytes(body.into()))
+        .send(upload_url)
+        .map_err(|err| UploadMediaError {
+            message: err.to_string(),
+        })?;
+
+    if (200..300).contains(&response.status.as_u16()) {
+        let media_upload_res: MediaUploadResponse = serde_json::from_slice(&response.body)
+            .map_err(|err| UploadMediaError {
                 message: err.to_string(),
             })?;
 
@@ -83,4 +82,37 @@ pub async fn upload(client: reqwest::Client, path: PathBuf) -> Result<String, Up
             message: "Please provive a valid image file. Videos are not supported".to_string(),
         })
     }
+}
+
+fn build_multipart_body(
+    boundary: &str,
+    file_name: &str,
+    media_type: &str,
+    media_bytes: &[u8],
+) -> Vec<u8> {
+    let mut body = Vec::new();
+
+    let write_text_part = |body: &mut Vec<u8>, name: &str, value: &str| {
+        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        body.extend_from_slice(
+            format!("Content-Disposition: form-data; name=\"{name}\"\r\n\r\n").as_bytes(),
+        );
+        body.extend_from_slice(value.as_bytes());
+        body.extend_from_slice(b"\r\n");
+    };
+
+    write_text_part(&mut body, "media_category", "tweet_image");
+    write_text_part(&mut body, "media_type", media_type);
+
+    body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+    body.extend_from_slice(
+        format!("Content-Disposition: form-data; name=\"media\"; filename=\"{file_name}\"\r\n")
+            .as_bytes(),
+    );
+    body.extend_from_slice(format!("Content-Type: {media_type}\r\n\r\n").as_bytes());
+    body.extend_from_slice(media_bytes);
+    body.extend_from_slice(b"\r\n");
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+
+    body
 }
