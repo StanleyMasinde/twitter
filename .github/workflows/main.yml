@@ -47,11 +47,13 @@ jobs:
             os: windows-latest
             name: windows-x86_64
             archive_ext: zip
+            vcpkg_triplet: x64-windows-static-md
 
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
             name: windows-arm
             archive_ext: zip
+            vcpkg_triplet: arm64-windows-static-md
 
     runs-on: ${{ matrix.os }}
 
@@ -72,6 +74,27 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install SQLite via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          if (-not (Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found at $vcpkgExe"
+          }
+
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install sqlite3 with vcpkg."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
 
       - name: Build release
         shell: bash
