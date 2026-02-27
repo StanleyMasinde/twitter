@@ -8,7 +8,11 @@ use std::{
 
 use dirs::home_dir;
 
-use crate::config::Config;
+use crate::{
+    config::Config,
+    schedule::Schedule,
+    twitter::tweet::{Tweet, TwitterApi},
+};
 
 pub fn load_config() -> Config {
     let config_dir = home_dir()
@@ -88,4 +92,49 @@ pub fn check_permissions(path: &PathBuf, is_dir: bool) {
 pub(crate) fn gracefully_exit(message: &str) -> ! {
     println!("{message}");
     process::exit(1)
+}
+
+pub(crate) async fn send_due_tweets() {
+    let schedule = Schedule::default();
+    let due_tweets = schedule.due();
+    if due_tweets.is_empty() {
+        println!("No pending scheduled tweets to run.");
+        return;
+    }
+
+    let mut sent_count = 0;
+    let mut failed_count = 0;
+    for (index, due_tweet) in due_tweets.iter().enumerate() {
+        println!("> Sending tweet {}/{}", index + 1, due_tweets.len());
+        let mut tweet = match Tweet::from_str(&due_tweet.body) {
+            Ok(tweet) => tweet,
+            Err(err) => {
+                eprintln!(
+                    "Failed to build tweet payload for schedule id {}: {}",
+                    due_tweet.id, err.message
+                );
+                schedule.mark_failed(due_tweet.id, &err.message);
+                failed_count += 1;
+                continue;
+            }
+        };
+        let api_res = tweet.create().await;
+        match api_res {
+            Ok(res) => {
+                println!("{}", res.content);
+                schedule.mark_sent(due_tweet.id);
+                sent_count += 1;
+            }
+            Err(err) => {
+                eprintln!("{}", err.message);
+                schedule.mark_failed(due_tweet.id, &err.message);
+                failed_count += 1;
+            }
+        }
+    }
+
+    println!(
+        "Finished sending scheduled tweets. Sent: {}, Failed: {}.",
+        sent_count, failed_count
+    );
 }
