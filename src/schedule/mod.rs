@@ -103,7 +103,7 @@ impl Schedule {
         }
     }
 
-    pub fn save(self) {
+    pub fn save(self) -> bool {
         let query = format!(
             "
             INSERT INTO {TABLE_NAME} (
@@ -118,7 +118,10 @@ impl Schedule {
             .execute(&query, (self.tweet_body.text, self.send_time.to_string()))
         {
             eprintln!("Failed to save scheduled tweet: {err}");
+            return false;
         }
+
+        true
     }
 
     pub fn all(&self) -> Vec<ScheduledTweet> {
@@ -126,10 +129,14 @@ impl Schedule {
         self.query_tweets(&query)
     }
 
-    pub fn clear(&self) {
+    pub fn clear(&self) -> usize {
         let query = format!("DELETE FROM {TABLE_NAME}");
-        if let Err(err) = self.connection.execute(&query, ()) {
-            eprintln!("Failed to clear scheduled tweets: {err}");
+        match self.connection.execute(&query, ()) {
+            Ok(cleared_rows) => cleared_rows,
+            Err(err) => {
+                eprintln!("Failed to clear scheduled tweets: {err}");
+                0
+            }
         }
     }
 
@@ -300,7 +307,7 @@ mod test {
         let body = "This is a scheduled Tweet";
         let time = "Tomorrow";
         let scheduled_tweet = Schedule::new(body, time);
-        scheduled_tweet.save();
+        let _ = scheduled_tweet.save();
     }
 
     #[test]
@@ -317,10 +324,10 @@ mod test {
     fn schedule_filter_failed_and_sent() {
         setup_test_data_dir();
         let schedule = Schedule::default();
-        schedule.clear();
+        let _ = schedule.clear();
 
-        Schedule::new("failed tweet", "Tomorrow").save();
-        Schedule::new("sent tweet", "Tomorrow").save();
+        let _ = Schedule::new("failed tweet", "Tomorrow").save();
+        let _ = Schedule::new("sent tweet", "Tomorrow").save();
 
         let all = schedule.all();
         let failed_id = all
@@ -349,9 +356,9 @@ mod test {
     fn schedule_mark_failed_tracks_error() {
         setup_test_data_dir();
         let schedule = Schedule::default();
-        schedule.clear();
+        let _ = schedule.clear();
 
-        Schedule::new("tweet that fails", "Tomorrow").save();
+        let _ = Schedule::new("tweet that fails", "Tomorrow").save();
         let all = schedule.all();
         let tweet_id = all
             .iter()

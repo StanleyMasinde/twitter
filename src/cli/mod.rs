@@ -214,11 +214,17 @@ pub async fn run() {
         Commands::Schedule { command } => match command {
             ScheduleEnum::New { body, on } => {
                 let schedule = schedule::Schedule::new(&body, &on);
-                schedule.save();
+                if schedule.save() {
+                    println!("Tweet scheduled for {on}.");
+                } else {
+                    eprintln!("Unable to schedule tweet.");
+                }
             }
             ScheduleEnum::Clear {} => {
                 let schedule = schedule::Schedule::default();
-                schedule.clear();
+                let cleared = schedule.clear();
+                let suffix = if cleared == 1 { "" } else { "s" };
+                println!("Cleared {cleared} scheduled tweet{suffix}.");
             }
             ScheduleEnum::Send {} => {
                 send_due_tweets().await;
@@ -231,13 +237,17 @@ pub async fn run() {
                     ListFilter::Failed => schedule.failed(),
                     ListFilter::Sent => schedule.sent(),
                 };
+                if tweets.is_empty() {
+                    println!("No scheduled tweets found.");
+                    return;
+                }
                 table_builder.push_record(["Id", "Body", "Send time"]);
                 for row in tweets {
                     table_builder.push_record([row.id.to_string(), row.body, row.scheduled_for]);
                 }
 
                 let table = table_builder.build();
-                println!("{table}")
+                println!("{table}");
             }
         },
     }
