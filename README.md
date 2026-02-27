@@ -204,6 +204,96 @@ Pipe thread content with `---` separators.
 cat thread.txt | twitter tweet
 ```
 
+### Schedule tweets
+#### Add a scheduled tweet
+Use either `--on` or `--at`.
+```bash
+twitter schedule new --body "Ship update at 5:06pm" --on "17:06"
+twitter schedule new --body "Ship update on Tuesday" --at "Tuesday"
+```
+
+#### List scheduled tweets
+```bash
+twitter schedule list
+twitter schedule list --filter failed
+twitter schedule list --filter sent
+```
+If no rows match your filter, the CLI prints:
+```text
+No scheduled tweets were found.
+```
+
+#### Run pending scheduled tweets
+```bash
+twitter schedule run
+```
+If none are due, the CLI prints:
+```text
+No pending scheduled tweets to run.
+```
+
+#### Pair with your OS scheduler
+`schedule run` is intended to be executed regularly by your OS scheduler.
+Run scheduler jobs as the same user who ran `twitter config --init`.
+First get your installed binary path:
+```bash
+command -v twitter
+```
+
+Linux (cron):
+```bash
+crontab -e
+```
+```cron
+* * * * * /usr/local/bin/twitter schedule run >> /tmp/twitter-schedule.log 2>&1
+```
+If your binary is not in `/usr/local/bin/twitter`, replace that path with the output of `command -v twitter`.
+
+macOS (launchd):
+```xml
+<!-- ~/Library/LaunchAgents/com.twitter.schedule.plist -->
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>com.twitter.schedule</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/local/bin/twitter</string>
+      <string>schedule</string>
+      <string>run</string>
+    </array>
+    <key>StartInterval</key><integer>60</integer>
+    <key>StandardOutPath</key><string>/tmp/twitter-schedule.log</string>
+    <key>StandardErrorPath</key><string>/tmp/twitter-schedule.log</string>
+  </dict>
+</plist>
+```
+If your binary is not in `/usr/local/bin/twitter`, replace that path with the output of `command -v twitter`.
+Load it (current user):
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.twitter.schedule.plist
+launchctl kickstart -k gui/$(id -u)/com.twitter.schedule
+```
+
+Windows (Task Scheduler):
+Use `where twitter` in PowerShell to find the full path to `twitter.exe`.
+
+Create a task that runs every minute with:
+```powershell
+schtasks /Create /SC MINUTE /MO 1 /TN "TwitterScheduleRunner" /TR "\"C:\Users\<you>\bin\twitter.exe\" schedule run" /F
+```
+If your binary is not in `C:\Users\<you>\bin\twitter.exe`, replace that path with the output of `where twitter`.
+
+#### Clear scheduled tweets
+```bash
+twitter schedule clear
+```
+The CLI prints how many records were removed, for example:
+```text
+Cleared 3 scheduled tweets.
+```
+
 **API Response:**
 ```text
 Tweet Id: 2006409743426818416
