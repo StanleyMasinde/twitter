@@ -156,6 +156,29 @@ If you face a 403 error when tweeting:
 
 > **NB:** Regenerate tokens after updating permissions, otherwise old tokens remain read-only.
 
+## Service Unavailable (503) when posting
+If media upload works but `POST /2/tweets` fails with:
+
+```json
+{"title":"Service Unavailable","detail":"Service Unavailable","type":"about:blank","status":503}
+```
+
+check the following:
+
+1. In the X Developer Portal (`developer.x.com` / `console.x.com`), confirm your app has active billing and available credits.
+2. Ensure your app permissions are still **Read and write**, then regenerate Access Token and Secret after permission changes.
+3. Retry a minimal text-only tweet first:
+   ```bash
+   twitter tweet --body "test"
+   ```
+4. If text-only works, retry with media:
+   ```bash
+   twitter tweet --body "test with image" --image ~/path/to/image.png
+   ```
+5. Check your X API usage dashboard and logs to confirm write calls are not blocked by billing, limits, or temporary platform incidents.
+
+> **Note:** Some 503 responses are transient. If configuration and billing are correct, wait a few minutes and retry.
+
 ## Usage
 
 ### Tweet in CLI Mode
