@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use jiff::Timestamp;
+use jiff::{Timestamp, ToSpan};
 use parse_datetime::parse_datetime;
 use rusqlite::{
     Connection,
@@ -93,7 +93,17 @@ impl Schedule {
             }
         };
 
-        let send_time = zone_local_time.timestamp();
+        let mut send_time = zone_local_time.timestamp();
+        if send_time < Timestamp::now() {
+            send_time = zone_local_time
+                .checked_add(1.day())
+                .unwrap_or_else(|err| {
+                    gracefully_exit(&format!(
+                        "Invalid scheduled time '{time}': failed to roll forward one day: {err}"
+                    ))
+                })
+                .timestamp();
+        }
         let connection = Self::open_connection();
 
         Self {
@@ -285,6 +295,8 @@ impl Schedule {
 mod test {
     use std::{env, fs};
 
+    use parse_datetime::parse_datetime;
+
     use crate::schedule::Schedule;
     use serial_test::serial;
 
@@ -372,6 +384,30 @@ mod test {
 
         assert_eq!(row.attempts, 1);
         assert_eq!(row.last_error.as_deref(), Some("timeout"));
+    }
+
+    #[test]
+    fn roll_forward_when_past() {
+        let got = Schedule::new("body", "2026-01-01 09:00").send_time;
+        let expected = parse_datetime("2026-01-02 09:00").unwrap().timestamp();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn keep_when_not_past() {
+        let got = Schedule::new("body", "2099-01-01 09:00").send_time;
+        let expected = parse_datetime("2099-01-01 09:00").unwrap().timestamp();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn roll_forward_non_time_input_when_past() {
+        let got = Schedule::new("body", "2026-01-01 09:00").send_time;
+        let expected = parse_datetime("2026-01-02 09:00").unwrap().timestamp();
+
+        assert_eq!(got, expected);
     }
 
     // #[test]
