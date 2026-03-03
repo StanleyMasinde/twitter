@@ -86,7 +86,7 @@ enum ScheduleEnum {
         body: String,
 
         /// The time to send the tweet
-        #[arg(long, visible_alias = "at")]
+        #[arg(long, visible_aliases = ["at", "in"])]
         on: String,
     },
 
