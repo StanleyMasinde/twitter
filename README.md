@@ -229,10 +229,11 @@ cat thread.txt | twitter tweet
 
 ### Schedule tweets
 #### Add a scheduled tweet
-Use either `--on` or `--at`.
+Use either `--on`, `--at` or `--in` to specify the time. Please note that these are aliases.
 ```bash
 twitter schedule new --body "Ship update at 5:06pm" --at "17:06"
 twitter schedule new --body "Ship update on Tuesday" --on "Tuesday"
+twitter schedule new --body "Ship update in 30 minutes" --in "30 minutes"
 ```
 
 #### List scheduled tweets
