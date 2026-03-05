@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub mod media;
 pub(crate) mod timeline;
 pub mod tweet;
+pub mod user;
 
 pub struct Response<T> {
     #[allow(dead_code)]

@@ -78,6 +78,9 @@ enum Commands {
 
     /// Timeline
     Timeline {},
+
+    /// Show information about the current authenticated user
+    Me {},
 }
 
 #[derive(Debug, Subcommand)]
@@ -343,6 +346,13 @@ pub fn run() {
                         );
                     }
                 }
+                Err(err) => eprintln!("{}", err.message),
+            }
+        }
+        Commands::Me {} => {
+            let me_res = twitter::user::me();
+            match me_res {
+                Ok(ok) => println!("{}", ok.content),
                 Err(err) => eprintln!("{}", err.message),
             }
         }
