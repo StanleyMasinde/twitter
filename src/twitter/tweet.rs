@@ -2,8 +2,7 @@ use std::fmt::Error;
 use std::str::FromStr;
 
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
-use crate::utils::load_config;
-use oauth::{HMAC_SHA1, Token};
+use crate::utils::oauth_post_header;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -96,16 +95,8 @@ impl<'t> Tweet<'t> {
     }
 
     fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
-        let mut cfg = load_config();
-        let current_account = cfg.current_account();
-        let token = Token::from_parts(
-            current_account.consumer_key.as_str(),
-            current_account.consumer_secret.as_str(),
-            current_account.access_token.as_str(),
-            current_account.access_secret.as_str(),
-        );
         let url = "https://api.twitter.com/2/tweets";
-        let auth_header = oauth::post(url, &(), &token, HMAC_SHA1);
+        let auth_header = oauth_post_header(url, &());
         let media = self.payload.media.clone();
         let mut reply = None;
         if self.previous_tweet.is_some() {

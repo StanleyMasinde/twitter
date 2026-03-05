@@ -75,6 +75,9 @@ enum Commands {
         #[command(subcommand)]
         command: ScheduleEnum,
     },
+
+    /// Timeline
+    Timeline {},
 }
 
 #[derive(Debug, Subcommand)]
@@ -314,5 +317,34 @@ pub fn run() {
                 }
             }
         },
+        Commands::Timeline {} => {
+            let user_id = match utils::get_current_user_id() {
+                Ok(id) => id,
+                Err(err) => {
+                    eprintln!("{err}");
+                    return;
+                }
+            };
+
+            let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
+            let timeline_res = timeline.fetch();
+            match timeline_res {
+                Ok(ok) => {
+                    let tweets = ok.content.data;
+                    if tweets.is_empty() {
+                        println!("No tweets found in timeline.");
+                        return;
+                    }
+
+                    for tweet in tweets {
+                        println!(
+                            "{}\n",
+                            twitter::TweetCreateResponse { data: tweet }
+                        );
+                    }
+                }
+                Err(err) => eprintln!("{}", err.message),
+            }
+        }
     }
 }
