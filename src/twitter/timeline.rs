@@ -2,9 +2,8 @@ use std::fmt::Display;
 
 use crate::{
     twitter::{Response, TweetData},
-    utils::load_config,
+    utils::oauth_get_header,
 };
-use oauth::{HMAC_SHA1, Token};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -56,19 +55,11 @@ impl Timeline {
     }
 
     pub fn fetch(&self) -> Result<Response<TimelineResponse>, TimelineError> {
-        let mut cfg = load_config();
-        let current_account = cfg.current_account();
-        let token = Token::from_parts(
-            current_account.consumer_key.as_str(),
-            current_account.consumer_secret.as_str(),
-            current_account.access_token.as_str(),
-            current_account.access_secret.as_str(),
-        );
         let url = self.url();
         let max_results = self.max_results;
         let auth_params =
             oauth::ParameterList::new([("max_results", &max_results as &dyn Display)]);
-        let auth_header = oauth::get(url.as_str(), &auth_params, &token, HMAC_SHA1);
+        let auth_header = oauth_get_header(url.as_str(), &auth_params);
         let max_results_query = max_results.to_string();
 
         let response = curl_rest::Client::default()

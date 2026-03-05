@@ -7,7 +7,7 @@ use std::{
 };
 
 use dirs::home_dir;
-use oauth::{HMAC_SHA1, Token};
+use oauth::{HMAC_SHA1, Request, Token};
 use rusqlite::{Connection, params};
 use serde::Deserialize;
 
@@ -79,6 +79,24 @@ pub fn get_current_user_id() -> Result<String, String> {
     let user_id = fetch_user_id(account)?;
     save_cached_user_id(&connection, account_index, &user_id)?;
     Ok(user_id)
+}
+
+pub fn oauth_get_header<R>(url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let mut cfg = load_config();
+    let account = cfg.current_account();
+    oauth_get_header_for_account(account, url, request)
+}
+
+pub fn oauth_post_header<R>(url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let mut cfg = load_config();
+    let account = cfg.current_account();
+    oauth_post_header_for_account(account, url, request)
 }
 
 pub fn open_editor(file: &PathBuf) -> ExitStatus {
@@ -172,14 +190,8 @@ pub(crate) fn send_due_tweets() {
 }
 
 fn fetch_user_id(account: &Account) -> Result<String, String> {
-    let token = Token::from_parts(
-        account.consumer_key.as_str(),
-        account.consumer_secret.as_str(),
-        account.access_token.as_str(),
-        account.access_secret.as_str(),
-    );
     let url = "https://api.x.com/2/users/me";
-    let auth_header = oauth::get(url, &(), &token, HMAC_SHA1);
+    let auth_header = oauth_get_header_for_account(account, url, &());
     let response = curl_rest::Client::default()
         .get()
         .header(curl_rest::Header::Authorization(auth_header.into()))
@@ -193,6 +205,32 @@ fn fetch_user_id(account: &Account) -> Result<String, String> {
     } else {
         Err(String::from_utf8_lossy(&response.body).to_string())
     }
+}
+
+fn oauth_get_header_for_account<R>(account: &Account, url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let token = Token::from_parts(
+        account.consumer_key.as_str(),
+        account.consumer_secret.as_str(),
+        account.access_token.as_str(),
+        account.access_secret.as_str(),
+    );
+    oauth::get(url, request, &token, HMAC_SHA1)
+}
+
+fn oauth_post_header_for_account<R>(account: &Account, url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let token = Token::from_parts(
+        account.consumer_key.as_str(),
+        account.consumer_secret.as_str(),
+        account.access_token.as_str(),
+        account.access_secret.as_str(),
+    );
+    oauth::post(url, request, &token, HMAC_SHA1)
 }
 
 fn open_cache_connection() -> Result<Connection, String> {

@@ -3,10 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use oauth::{HMAC_SHA1, Token};
 use serde::Deserialize;
 
-use crate::utils::load_config;
+use crate::utils::oauth_post_header;
 
 #[derive(Debug, Deserialize)]
 struct MediaUploadResponse {
@@ -27,15 +26,7 @@ pub fn upload(path: PathBuf) -> Result<String, UploadMediaError> {
     let upload_url = "https://api.x.com/2/media/upload";
     println!("> Uploading image to Twitter.");
 
-    let mut cfg = load_config();
-    let current_account = cfg.current_account();
-    let token = Token::from_parts(
-        current_account.consumer_key.as_str(),
-        current_account.consumer_secret.as_str(),
-        current_account.access_token.as_str(),
-        current_account.access_secret.as_str(),
-    );
-    let auth_header = oauth::post(upload_url, &(), &token, HMAC_SHA1);
+    let auth_header = oauth_post_header(upload_url, &());
     let file_kind = infer::get_from_path(&path);
 
     let media_type = match file_kind {
