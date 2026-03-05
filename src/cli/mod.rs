@@ -337,7 +337,10 @@ pub fn run() {
                     }
 
                     for tweet in tweets {
-                        println!("Tweet Id: {}\nTweet body: {}\n", tweet.id, tweet.text);
+                        println!(
+                            "{}\n",
+                            twitter::TweetCreateResponse { data: tweet }
+                        );
                     }
                 }
                 Err(err) => eprintln!("{}", err.message),
