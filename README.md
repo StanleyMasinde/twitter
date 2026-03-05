@@ -318,6 +318,24 @@ The CLI prints how many records were removed, for example:
 Cleared 3 scheduled tweets.
 ```
 
+### Timeline
+Fetch your reverse-chronological home timeline.
+```bash
+twitter timeline
+```
+
+### Current user
+Fetch details for the currently authenticated user (`GET /2/users/me`).
+```bash
+twitter me
+```
+Example output:
+```text
+User Id: 123456789
+Name: Jane Doe
+Username: @janedoe
+```
+
 **API Response:**
 ```text
 Tweet Id: 2006409743426818416
