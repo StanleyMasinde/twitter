@@ -76,6 +76,12 @@ enum Commands {
         command: ScheduleEnum,
     },
 
+    /// Likes
+    Likes {
+        #[command(subcommand)]
+        command: LikesEnum,
+    },
+
     /// Timeline
     Timeline {},
 
@@ -106,6 +112,12 @@ enum ScheduleEnum {
 
     /// Run all ready-to-send scheduled tweets
     Run {},
+}
+
+#[derive(Debug, Subcommand)]
+enum LikesEnum {
+    /// Fetch tweets liked by the current authenticated user
+    Tweets {},
 }
 
 #[derive(Debug, clap::Args)]
@@ -320,6 +332,34 @@ pub fn run() {
                     );
                 } else {
                     println!("Total: {}", tweets.len());
+                }
+            }
+        },
+        Commands::Likes { command } => match command {
+            LikesEnum::Tweets {} => {
+                let user_id = match utils::get_current_user_id() {
+                    Ok(id) => id,
+                    Err(err) => {
+                        eprintln!("{err}");
+                        return;
+                    }
+                };
+
+                let likes = twitter::likes::Likes::new(user_id).max_results(10);
+                let likes_res = likes.fetch();
+                match likes_res {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        if tweets.is_empty() {
+                            println!("No liked tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!("{}\n", twitter::TweetCreateResponse { data: tweet });
+                        }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
                 }
             }
         },
