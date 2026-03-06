@@ -336,6 +336,12 @@ Search recent tweets by query.
 twitter tweets recent --query "rustlang"
 ```
 
+### Full-archive tweet search
+Search all tweets by query.
+```bash
+twitter tweets all --query "rustlang"
+```
+
 ### Mentions
 Fetch tweets that mention the currently authenticated user.
 ```bash

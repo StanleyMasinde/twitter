@@ -144,6 +144,17 @@ enum TweetsEnum {
         #[arg(long, default_value_t = 10)]
         max_results: u8,
     },
+
+    /// Search all tweets
+    All {
+        /// Search query
+        #[arg(long)]
+        query: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u16,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -255,6 +266,32 @@ pub fn run() {
                         let includes = ok.content.includes;
                         if tweets.is_empty() {
                             println!("No recent tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::All { query, max_results } => {
+                let tweets = twitter::tweets::AllTweets::new(query)
+                    .max_results(max_results)
+                    .fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found.");
                             return;
                         }
 
