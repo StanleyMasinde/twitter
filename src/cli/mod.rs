@@ -79,6 +79,9 @@ enum Commands {
     /// Timeline
     Timeline {},
 
+    /// Mentions
+    Mentions {},
+
     /// Show information about the current authenticated user
     Me {},
 }
@@ -340,10 +343,33 @@ pub fn run() {
                     }
 
                     for tweet in tweets {
-                        println!(
-                            "{}\n",
-                            twitter::TweetCreateResponse { data: tweet }
-                        );
+                        println!("{}\n", twitter::TweetCreateResponse { data: tweet });
+                    }
+                }
+                Err(err) => eprintln!("{}", err.message),
+            }
+        }
+        Commands::Mentions {} => {
+            let user_id = match utils::get_current_user_id() {
+                Ok(id) => id,
+                Err(err) => {
+                    eprintln!("{err}");
+                    return;
+                }
+            };
+
+            let mentions = twitter::mentions::Mentions::new(user_id).max_results(10);
+            let mentions_res = mentions.fetch();
+            match mentions_res {
+                Ok(ok) => {
+                    let tweets = ok.content.data;
+                    if tweets.is_empty() {
+                        println!("No mentions found.");
+                        return;
+                    }
+
+                    for tweet in tweets {
+                        println!("{}\n", twitter::TweetCreateResponse { data: tweet });
                     }
                 }
                 Err(err) => eprintln!("{}", err.message),

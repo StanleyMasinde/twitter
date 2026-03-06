@@ -3,6 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 pub mod media;
+pub(crate) mod mentions;
 pub(crate) mod timeline;
 pub mod tweet;
 pub mod user;
