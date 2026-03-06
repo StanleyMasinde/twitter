@@ -324,8 +324,14 @@ Fetch your reverse-chronological home timeline.
 twitter timeline
 ```
 
+### Mentions
+Fetch tweets that mention the currently authenticated user.
+```bash
+twitter mentions
+```
+
 ### Current user
-Fetch details for the currently authenticated user (`GET /2/users/me`).
+Fetch details for the currently authenticated user. 
 ```bash
 twitter me
 ```
