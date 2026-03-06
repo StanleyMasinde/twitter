@@ -89,7 +89,10 @@ enum Commands {
     },
 
     /// Timeline
-    Timeline {},
+    Timeline {
+        #[command(subcommand)]
+        command: TimelineEnum,
+    },
 
     /// Mentions
     Mentions {},
@@ -124,6 +127,13 @@ enum ScheduleEnum {
 enum LikesEnum {
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
+}
+
+#[derive(Debug, Subcommand)]
+enum TimelineEnum {
+    /// Fetch the reverse-chronological home timeline
+    #[command(visible_alias = "reverse")]
+    ReverseChronological {},
 }
 
 #[derive(Debug, Subcommand)]
@@ -468,39 +478,41 @@ pub fn run() {
                 }
             }
         },
-        Commands::Timeline {} => {
-            let user_id = match utils::get_current_user_id() {
-                Ok(id) => id,
-                Err(err) => {
-                    eprintln!("{err}");
-                    return;
-                }
-            };
-
-            let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
-            let timeline_res = timeline.fetch();
-            match timeline_res {
-                Ok(ok) => {
-                    let tweets = ok.content.data;
-                    let includes = ok.content.includes;
-                    if tweets.is_empty() {
-                        println!("No tweets found in timeline.");
+        Commands::Timeline { command } => match command {
+            TimelineEnum::ReverseChronological {} => {
+                let user_id = match utils::get_current_user_id() {
+                    Ok(id) => id,
+                    Err(err) => {
+                        eprintln!("{err}");
                         return;
                     }
+                };
 
-                    for tweet in tweets {
-                        println!(
-                            "{}\n",
-                            twitter::TweetCreateResponse {
-                                data: tweet,
-                                includes: includes.clone(),
-                            }
-                        );
+                let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
+                let timeline_res = timeline.fetch();
+                match timeline_res {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found in timeline.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
                     }
+                    Err(err) => eprintln!("{}", err.message),
                 }
-                Err(err) => eprintln!("{}", err.message),
             }
-        }
+        },
         Commands::Mentions {} => {
             let user_id = match utils::get_current_user_id() {
                 Ok(id) => id,

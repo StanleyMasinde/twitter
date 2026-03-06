@@ -321,7 +321,7 @@ Cleared 3 scheduled tweets.
 ### Timeline
 Fetch your reverse-chronological home timeline.
 ```bash
-twitter timeline
+twitter timeline reverse
 ```
 
 ### Tweet lookup
