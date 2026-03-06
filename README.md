@@ -324,6 +324,12 @@ Fetch your reverse-chronological home timeline.
 twitter timeline
 ```
 
+### Tweet lookup
+Fetch a specific tweet by id.
+```bash
+twitter tweets --by-id 2006409743426818416
+```
+
 ### Mentions
 Fetch tweets that mention the currently authenticated user.
 ```bash

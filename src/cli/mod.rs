@@ -45,6 +45,13 @@ enum Commands {
         editor: bool,
     },
 
+    /// Fetch tweets
+    Tweets {
+        /// Fetch a tweet by id
+        #[arg(long, name = "by_id")]
+        by_id: String,
+    },
+
     /// Manage config
     Config {
         /// init the config file
@@ -211,6 +218,13 @@ pub fn run() {
                 Err(err) => println!("{}", err.message),
             }
         }
+        Commands::Tweets { by_id } => {
+            let tweet_res = twitter::tweets::TweetLookup::new(by_id).fetch();
+            match tweet_res {
+                Ok(ok) => println!("{}", ok.content),
+                Err(err) => eprintln!("{}", err.message),
+            }
+        }
         Commands::Config {
             edit,
             show,
@@ -350,13 +364,20 @@ pub fn run() {
                 match likes_res {
                     Ok(ok) => {
                         let tweets = ok.content.data;
+                        let includes = ok.content.includes;
                         if tweets.is_empty() {
                             println!("No liked tweets found.");
                             return;
                         }
 
                         for tweet in tweets {
-                            println!("{}\n", twitter::TweetCreateResponse { data: tweet });
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
                         }
                     }
                     Err(err) => eprintln!("{}", err.message),
@@ -377,13 +398,20 @@ pub fn run() {
             match timeline_res {
                 Ok(ok) => {
                     let tweets = ok.content.data;
+                    let includes = ok.content.includes;
                     if tweets.is_empty() {
                         println!("No tweets found in timeline.");
                         return;
                     }
 
                     for tweet in tweets {
-                        println!("{}\n", twitter::TweetCreateResponse { data: tweet });
+                        println!(
+                            "{}\n",
+                            twitter::TweetCreateResponse {
+                                data: tweet,
+                                includes: includes.clone(),
+                            }
+                        );
                     }
                 }
                 Err(err) => eprintln!("{}", err.message),
@@ -403,13 +431,20 @@ pub fn run() {
             match mentions_res {
                 Ok(ok) => {
                     let tweets = ok.content.data;
+                    let includes = ok.content.includes;
                     if tweets.is_empty() {
                         println!("No mentions found.");
                         return;
                     }
 
                     for tweet in tweets {
-                        println!("{}\n", twitter::TweetCreateResponse { data: tweet });
+                        println!(
+                            "{}\n",
+                            twitter::TweetCreateResponse {
+                                data: tweet,
+                                includes: includes.clone(),
+                            }
+                        );
                     }
                 }
                 Err(err) => eprintln!("{}", err.message),
