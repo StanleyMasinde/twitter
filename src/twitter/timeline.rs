@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    twitter::{Response, TweetData},
+    twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
     utils::oauth_get_header,
 };
 use serde::Deserialize;
@@ -19,6 +19,8 @@ pub struct TimelineMeta {
 #[derive(Debug, Deserialize)]
 pub struct TimelineResponse {
     pub data: Vec<TweetData>,
+    #[serde(default)]
+    pub includes: Option<Includes>,
     #[allow(dead_code)]
     pub meta: Option<TimelineMeta>,
 }
@@ -57,14 +59,24 @@ impl Timeline {
     pub fn fetch(&self) -> Result<Response<TimelineResponse>, TimelineError> {
         let url = self.url();
         let max_results = self.max_results;
-        let auth_params =
-            oauth::ParameterList::new([("max_results", &max_results as &dyn Display)]);
+        let tweet_fields = TWEET_FIELDS.to_string();
+        let user_fields = USER_FIELDS.to_string();
+        let expansions = AUTHOR_EXPANSION.to_string();
+        let auth_params = oauth::ParameterList::new([
+            ("max_results", &max_results as &dyn Display),
+            ("tweet.fields", &tweet_fields as &dyn Display),
+            ("user.fields", &user_fields as &dyn Display),
+            ("expansions", &expansions as &dyn Display),
+        ]);
         let auth_header = oauth_get_header(url.as_str(), &auth_params);
         let max_results_query = max_results.to_string();
 
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("tweet.fields", tweet_fields.as_str())
+            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("expansions", expansions.as_str())
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| TimelineError {

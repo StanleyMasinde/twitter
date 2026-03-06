@@ -154,8 +154,13 @@ impl<'t> TwitterApi for Tweet<'t> {
             text: "".to_string(),
             edit_history_tweet_ids: vec![],
             id: 0.to_string(),
+            author_id: None,
+            created_at: None,
         };
-        let content = TweetCreateResponse { data: tweet_data };
+        let content = TweetCreateResponse {
+            data: tweet_data,
+            includes: None,
+        };
         let mut response = Response {
             status: 200,
             content,
