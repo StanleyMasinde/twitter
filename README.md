@@ -327,7 +327,13 @@ twitter timeline
 ### Tweet lookup
 Fetch a specific tweet by id.
 ```bash
-twitter tweets --by-id 2006409743426818416
+twitter tweets by-id 2006409743426818416
+```
+
+### Recent tweet search
+Search recent tweets by query.
+```bash
+twitter tweets recent --query "rustlang"
 ```
 
 ### Mentions

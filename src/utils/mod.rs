@@ -99,6 +99,12 @@ where
     oauth_post_header_for_account(account, url, request)
 }
 
+pub fn bearer_auth_header() -> String {
+    let mut cfg = load_config();
+    let account = cfg.current_account();
+    format!("Bearer {}", account.bearer_token)
+}
+
 pub fn open_editor(file: &PathBuf) -> ExitStatus {
     #[cfg(unix)]
     let editor = env::var("EDITOR")

@@ -47,9 +47,8 @@ enum Commands {
 
     /// Fetch tweets
     Tweets {
-        /// Fetch a tweet by id
-        #[arg(long, name = "by_id")]
-        by_id: String,
+        #[command(subcommand)]
+        command: TweetsEnum,
     },
 
     /// Manage config
@@ -125,6 +124,26 @@ enum ScheduleEnum {
 enum LikesEnum {
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
+}
+
+#[derive(Debug, Subcommand)]
+enum TweetsEnum {
+    /// Fetch a tweet by id
+    ById {
+        /// The id of the tweet to fetch
+        id: String,
+    },
+
+    /// Search recent tweets
+    Recent {
+        /// Search query
+        #[arg(long)]
+        query: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -218,13 +237,41 @@ pub fn run() {
                 Err(err) => println!("{}", err.message),
             }
         }
-        Commands::Tweets { by_id } => {
-            let tweet_res = twitter::tweets::TweetLookup::new(by_id).fetch();
-            match tweet_res {
-                Ok(ok) => println!("{}", ok.content),
-                Err(err) => eprintln!("{}", err.message),
+        Commands::Tweets { command } => match command {
+            TweetsEnum::ById { id } => {
+                let tweet_res = twitter::tweets::TweetLookup::new(id).fetch();
+                match tweet_res {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
             }
-        }
+            TweetsEnum::Recent { query, max_results } => {
+                let tweets = twitter::tweets::RecentTweets::new(query)
+                    .max_results(max_results)
+                    .fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No recent tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
         Commands::Config {
             edit,
             show,
