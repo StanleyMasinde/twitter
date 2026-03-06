@@ -6,6 +6,7 @@ use crate::{
     utils::{bearer_auth_header, oauth_get_header},
 };
 use serde::Deserialize;
+use std::fmt::Display;
 
 #[derive(Debug, Deserialize)]
 pub struct TweetLookupError {
@@ -53,6 +54,12 @@ pub struct RecentTweets {
 pub struct AllTweets {
     query: String,
     max_results: u16,
+}
+
+#[derive(Debug)]
+pub struct UserTweets {
+    user_id: String,
+    max_results: u8,
 }
 
 impl TweetLookup {
@@ -196,6 +203,66 @@ impl AllTweets {
             .query_param_kv("expansions", expansions.as_str())
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url)
+            .map_err(|err| RecentTweetsError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let tweets_data: RecentTweetsResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| RecentTweetsError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: tweets_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(RecentTweetsError { message: err_data })
+        }
+    }
+}
+
+impl UserTweets {
+    pub fn new(user_id: impl Into<String>) -> Self {
+        Self {
+            user_id: user_id.into(),
+            max_results: 10,
+        }
+    }
+
+    pub fn max_results(mut self, max_results: u8) -> Self {
+        self.max_results = max_results.clamp(5, 100);
+        self
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/users/{}/tweets", self.user_id)
+    }
+
+    pub fn fetch(&self) -> Result<Response<RecentTweetsResponse>, RecentTweetsError> {
+        let url = self.url();
+        let max_results = self.max_results;
+        let tweet_fields = TWEET_FIELDS.to_string();
+        let user_fields = USER_FIELDS.to_string();
+        let expansions = AUTHOR_EXPANSION.to_string();
+        let auth_params = oauth::ParameterList::new([
+            ("max_results", &max_results as &dyn Display),
+            ("tweet.fields", &tweet_fields as &dyn Display),
+            ("user.fields", &user_fields as &dyn Display),
+            ("expansions", &expansions as &dyn Display),
+        ]);
+        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let max_results_query = max_results.to_string();
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("tweet.fields", tweet_fields.as_str())
+            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("expansions", expansions.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
             .map_err(|err| RecentTweetsError {
                 message: err.to_string(),
             })?;

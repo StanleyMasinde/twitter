@@ -134,6 +134,13 @@ enum TweetsEnum {
         id: String,
     },
 
+    /// Fetch tweets from a user by id
+    User {
+        /// The id of the user to fetch tweets for
+        #[arg(long)]
+        id: String,
+    },
+
     /// Search recent tweets
     Recent {
         /// Search query
@@ -253,6 +260,30 @@ pub fn run() {
                 let tweet_res = twitter::tweets::TweetLookup::new(id).fetch();
                 match tweet_res {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::User { id } => {
+                let tweets = twitter::tweets::UserTweets::new(id).max_results(10).fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

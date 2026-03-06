@@ -330,6 +330,12 @@ Fetch a specific tweet by id.
 twitter tweets by-id 2006409743426818416
 ```
 
+### User tweets
+Fetch tweets from a user by id.
+```bash
+twitter tweets user --id 2244994945
+```
+
 ### Recent tweet search
 Search recent tweets by query.
 ```bash
