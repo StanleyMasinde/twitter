@@ -330,6 +330,12 @@ Fetch tweets that mention the currently authenticated user.
 twitter mentions
 ```
 
+### Likes
+Fetch tweets liked by the currently authenticated user.
+```bash
+twitter likes tweets
+```
+
 ### Current user
 Fetch details for the currently authenticated user. 
 ```bash
