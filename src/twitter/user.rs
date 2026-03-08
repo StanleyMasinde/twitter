@@ -31,6 +31,11 @@ pub struct UsersLookup {
     user_ids: Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct UserLookupByUsername {
+    username: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct UserLookupResponse {
     pub data: UserData,
@@ -172,6 +177,46 @@ impl UsersLookup {
     }
 }
 
+impl UserLookupByUsername {
+    pub fn new(username: impl Into<String>) -> Self {
+        Self {
+            username: username.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/users/by/username/{}", self.username)
+    }
+
+    pub fn fetch(&self) -> Result<Response<UserLookupResponse>, UserLookupError> {
+        let url = self.url();
+        let auth_header = oauth_get_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .get()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| UserLookupError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let user_data: UserLookupResponse =
+                serde_json::from_slice(&response.body).map_err(|err| UserLookupError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: user_data,
+            })
+        } else {
+            Err(UserLookupError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 pub fn me() -> Result<Response<CurrentUserResponse>, CurrentUserError> {
     let url = "https://api.x.com/2/users/me";
     let auth_header = oauth_get_header(url, &());
@@ -238,6 +283,16 @@ mod tests {
         assert_eq!(
             response.to_string(),
             "User Id: 123\nName: Jane Doe\nUsername: @janedoe\n\nUser Id: 456\nName: John Doe\nUsername: @johndoe"
+        );
+    }
+
+    #[test]
+    fn test_user_lookup_by_username_url_uses_username() {
+        let endpoint = UserLookupByUsername::new("janedoe");
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/users/by/username/janedoe"
         );
     }
 }
