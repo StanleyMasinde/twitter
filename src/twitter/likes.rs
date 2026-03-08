@@ -45,6 +45,21 @@ pub struct CreateLikeError {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DeleteLikeData {
+    pub liked: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteLikeResponse {
+    pub data: DeleteLikeData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteLikeError {
+    pub message: String,
+}
+
 #[derive(Debug)]
 pub struct Likes {
     user_id: String,
@@ -53,6 +68,12 @@ pub struct Likes {
 
 #[derive(Debug)]
 pub struct CreateLike {
+    user_id: String,
+    tweet_id: String,
+}
+
+#[derive(Debug)]
+pub struct DeleteLike {
     user_id: String,
     tweet_id: String,
 }
@@ -170,6 +191,50 @@ impl CreateLike {
     }
 }
 
+impl DeleteLike {
+    pub fn for_current_user(tweet_id: impl Into<String>) -> Result<Self, DeleteLikeError> {
+        let user_id = get_current_user_id().map_err(|message| DeleteLikeError { message })?;
+        Ok(Self {
+            user_id,
+            tweet_id: tweet_id.into(),
+        })
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/likes/{}",
+            self.user_id, self.tweet_id
+        )
+    }
+
+    pub fn send(&self) -> Result<Response<DeleteLikeResponse>, DeleteLikeError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .delete()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| DeleteLikeError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: DeleteLikeResponse =
+                serde_json::from_slice(&response.body).map_err(|err| DeleteLikeError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(DeleteLikeError { message: err_data })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,5 +247,15 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/likes");
+    }
+
+    #[test]
+    fn test_delete_like_url_uses_current_user_and_tweet_id() {
+        let endpoint = DeleteLike {
+            user_id: "123".to_string(),
+            tweet_id: "456".to_string(),
+        };
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/likes/456");
     }
 }

@@ -144,6 +144,13 @@ enum LikesEnum {
         tweet_id: String,
     },
 
+    /// Delete a liked tweet for the current authenticated user
+    Delete {
+        /// The tweet id to unlike
+        #[arg(long)]
+        tweet_id: String,
+    },
+
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
 }
@@ -588,6 +595,23 @@ pub fn run() {
                                 println!("Liked tweet.");
                             } else {
                                 eprintln!("Tweet was not liked.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            LikesEnum::Delete { tweet_id } => {
+                let unlike = twitter::likes::DeleteLike::for_current_user(tweet_id);
+
+                match unlike {
+                    Ok(unlike) => match unlike.send() {
+                        Ok(ok) => {
+                            if ok.content.data.liked {
+                                eprintln!("Tweet is still liked.");
+                            } else {
+                                println!("Removed like.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
