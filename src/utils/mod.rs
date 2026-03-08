@@ -111,7 +111,11 @@ where
 pub fn bearer_auth_header() -> String {
     let mut cfg = load_config();
     let account = cfg.current_account();
-    format!("Bearer {}", account.bearer_token)
+    format_bearer_auth_header(account.bearer_token.as_str())
+}
+
+pub(crate) fn format_bearer_auth_header(token: &str) -> String {
+    format!("Bearer {token}")
 }
 
 pub fn open_editor(file: &PathBuf) -> ExitStatus {
