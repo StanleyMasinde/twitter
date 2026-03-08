@@ -132,6 +132,12 @@ enum Commands {
     /// Mentions
     Mentions {},
 
+    /// Filtered stream
+    Streams {
+        #[command(subcommand)]
+        command: StreamsEnum,
+    },
+
     /// Users
     Users {
         #[command(subcommand)]
@@ -621,6 +627,21 @@ enum UsersEnum {
         #[arg(long)]
         target_user_id: String,
     },
+}
+
+#[derive(Debug, Subcommand)]
+enum StreamsEnum {
+    /// Manage filtered stream rules
+    Rules {
+        #[command(subcommand)]
+        command: StreamRulesEnum,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum StreamRulesEnum {
+    /// List active stream rules
+    List {},
 }
 
 #[derive(Debug, clap::Args)]
@@ -1699,6 +1720,25 @@ pub fn run() {
                 Err(err) => eprintln!("{}", err.message),
             }
         }
+        Commands::Streams { command } => match command {
+            StreamsEnum::Rules { command } => match command {
+                StreamRulesEnum::List {} => {
+                    let rules = twitter::streams::StreamRules.fetch();
+
+                    match rules {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No stream rules found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    }
+                }
+            },
+        },
         Commands::Users { command } => match command {
             UsersEnum::ById { id } => {
                 let user = twitter::user::UserLookup::new(id).fetch();
