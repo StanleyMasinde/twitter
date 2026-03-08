@@ -314,6 +314,12 @@ twitter retweets delete --tweet-id 1234567890
 ```
 
 ### DMs
+#### Show DM events for a conversation
+```bash
+twitter dms conversation-events --conversation-id 1234567890-987654321
+twitter dms conversation-events --conversation-id 1234567890-987654321 --max-results 25
+```
+
 #### Show your DM events
 ```bash
 twitter dms events
