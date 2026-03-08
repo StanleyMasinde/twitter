@@ -537,6 +537,17 @@ enum UsersEnum {
         #[arg(long, value_delimiter = ',')]
         usernames: Vec<String>,
     },
+
+    /// Fetch the accounts a user follows
+    Following {
+        /// The user id to fetch
+        #[arg(long)]
+        id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1534,6 +1545,22 @@ pub fn run() {
                     Ok(ok) => {
                         if ok.content.data.is_empty() {
                             println!("No users found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::Following { id, max_results } => {
+                let users = twitter::follows::Following::new(id)
+                    .max_results(max_results)
+                    .fetch();
+                match users {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No following users found.");
                             return;
                         }
 

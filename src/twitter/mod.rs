@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub(crate) mod blocks;
 pub(crate) mod dms;
+pub(crate) mod follows;
 pub(crate) mod likes;
 pub(crate) mod lists;
 pub mod media;
