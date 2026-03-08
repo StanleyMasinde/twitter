@@ -200,6 +200,12 @@ enum ListsEnum {
 
 #[derive(Debug, Subcommand)]
 enum RetweetsEnum {
+    /// Create a retweet for the current authenticated user
+    Create {
+        /// The tweet id to retweet
+        #[arg(long)]
+        tweet_id: String,
+    },
     /// Delete the current authenticated user's retweet of a tweet
     Delete {
         /// The tweet id to unretweet
@@ -681,6 +687,23 @@ pub fn run() {
             }
         },
         Commands::Retweets { command } => match command {
+            RetweetsEnum::Create { tweet_id } => {
+                let create = twitter::retweets::CreateRetweet::for_current_user(tweet_id);
+
+                match create {
+                    Ok(create) => match create.send() {
+                        Ok(ok) => {
+                            if ok.content.data.retweeted {
+                                println!("Retweeted tweet.");
+                            } else {
+                                eprintln!("Tweet was not retweeted.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             RetweetsEnum::Delete { tweet_id } => {
                 let delete = twitter::retweets::DeleteRetweet::for_current_user(tweet_id);
 

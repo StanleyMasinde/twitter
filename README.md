@@ -296,8 +296,13 @@ twitter lists memberships --max-results 25
 ```
 
 ### Retweets
-#### Remove your retweet
+#### Retweet a tweet
 User-scoped retweet commands use the current authenticated user automatically.
+```bash
+twitter retweets create --tweet-id 1234567890
+```
+
+#### Remove your retweet
 ```bash
 twitter retweets delete --tweet-id 1234567890
 ```
