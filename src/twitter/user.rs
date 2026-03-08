@@ -36,6 +36,11 @@ pub struct UserLookupByUsername {
     username: String,
 }
 
+#[derive(Debug)]
+pub struct UsersLookupByUsernames {
+    usernames: Vec<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct UserLookupResponse {
     pub data: UserData,
@@ -217,6 +222,47 @@ impl UserLookupByUsername {
     }
 }
 
+impl UsersLookupByUsernames {
+    pub fn new(usernames: Vec<String>) -> Self {
+        Self { usernames }
+    }
+
+    fn url(&self) -> &'static str {
+        "https://api.x.com/2/users/by"
+    }
+
+    pub fn fetch(&self) -> Result<Response<UsersLookupResponse>, UsersLookupError> {
+        let url = self.url();
+        let usernames = self.usernames.join(",");
+        let auth_params = oauth::ParameterList::new([("usernames", &usernames as &dyn Display)]);
+        let auth_header = oauth_get_header(url, &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("usernames", usernames.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url)
+            .map_err(|err| UsersLookupError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let user_data: UsersLookupResponse =
+                serde_json::from_slice(&response.body).map_err(|err| UsersLookupError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: user_data,
+            })
+        } else {
+            Err(UsersLookupError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 pub fn me() -> Result<Response<CurrentUserResponse>, CurrentUserError> {
     let url = "https://api.x.com/2/users/me";
     let auth_header = oauth_get_header(url, &());
@@ -294,5 +340,13 @@ mod tests {
             endpoint.url(),
             "https://api.x.com/2/users/by/username/janedoe"
         );
+    }
+
+    #[test]
+    fn test_users_lookup_by_usernames_url_uses_collection_endpoint() {
+        let endpoint =
+            UsersLookupByUsernames::new(vec!["janedoe".to_string(), "johndoe".to_string()]);
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/users/by");
     }
 }

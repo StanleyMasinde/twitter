@@ -530,6 +530,13 @@ enum UsersEnum {
         #[arg(long)]
         username: String,
     },
+
+    /// Fetch multiple users by usernames
+    ByUsernames {
+        /// Comma-separated usernames
+        #[arg(long, value_delimiter = ',')]
+        usernames: Vec<String>,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1518,6 +1525,20 @@ pub fn run() {
                 let user = twitter::user::UserLookupByUsername::new(username).fetch();
                 match user {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::ByUsernames { usernames } => {
+                let users = twitter::user::UsersLookupByUsernames::new(usernames).fetch();
+                match users {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No users found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
