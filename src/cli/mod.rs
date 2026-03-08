@@ -438,10 +438,18 @@ enum TweetsEnum {
         id: String,
     },
 
+<<<<<<< HEAD
     /// Delete a tweet by id
     Delete {
         /// The id of the tweet to delete
         id: String,
+=======
+    /// Fetch multiple tweets by ids
+    ByIds {
+        /// Comma-separated tweet ids
+        #[arg(long, value_delimiter = ',')]
+        ids: Vec<String>,
+>>>>>>> feat/issue-54-get-tweets-api
     },
 
     /// Fetch tweets from a user by id
@@ -590,6 +598,7 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
+<<<<<<< HEAD
             TweetsEnum::Delete { id } => {
                 let delete = twitter::tweet::DeleteTweet::new(id);
 
@@ -599,6 +608,27 @@ pub fn run() {
                             println!("Deleted tweet.");
                         } else {
                             eprintln!("Tweet was not deleted.");
+=======
+            TweetsEnum::ByIds { ids } => {
+                let tweets = twitter::tweets::TweetsLookup::new(ids).fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+>>>>>>> feat/issue-54-get-tweets-api
                         }
                     }
                     Err(err) => eprintln!("{}", err.message),
