@@ -410,6 +410,13 @@ enum TweetsEnum {
         max_results: u8,
     },
 
+    /// Get recent tweet counts for a search query
+    CountRecent {
+        /// Search query
+        #[arg(long)]
+        query: String,
+    },
+
     /// Search all tweets
     All {
         /// Search query
@@ -581,6 +588,20 @@ pub fn run() {
                                 }
                             );
                         }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::CountRecent { query } => {
+                let counts = twitter::tweets::RecentTweetCounts::new(query).fetch();
+                match counts {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No tweet counts found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }

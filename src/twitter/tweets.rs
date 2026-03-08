@@ -50,6 +50,38 @@ pub struct RecentTweets {
     max_results: u8,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TweetCount {
+    pub start: String,
+    pub end: String,
+    pub tweet_count: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TweetCountsMeta {
+    #[allow(dead_code)]
+    pub total_tweet_count: Option<u64>,
+    #[allow(dead_code)]
+    pub next_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TweetCountsResponse {
+    pub data: Vec<TweetCount>,
+    #[allow(dead_code)]
+    pub meta: Option<TweetCountsMeta>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TweetCountsError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct RecentTweetCounts {
+    query: String,
+}
+
 #[derive(Debug)]
 pub struct AllTweets {
     query: String,
@@ -168,6 +200,48 @@ impl RecentTweets {
     }
 }
 
+impl RecentTweetCounts {
+    pub fn new(query: impl Into<String>) -> Self {
+        Self {
+            query: query.into(),
+        }
+    }
+
+    fn url(&self) -> &'static str {
+        "https://api.x.com/2/tweets/counts/recent"
+    }
+
+    pub fn fetch(&self) -> Result<Response<TweetCountsResponse>, TweetCountsError> {
+        let url = self.url();
+        let query = self.query.as_str();
+        let auth_params = oauth::ParameterList::new([("query", &query as &dyn Display)]);
+        let auth_header = oauth_get_header(url, &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("query", query)
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url)
+            .map_err(|err| TweetCountsError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let tweets_data: TweetCountsResponse =
+                serde_json::from_slice(&response.body).map_err(|err| TweetCountsError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: tweets_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(TweetCountsError { message: err_data })
+        }
+    }
+}
+
 impl AllTweets {
     pub fn new(query: impl Into<String>) -> Self {
         Self {
@@ -280,5 +354,36 @@ impl UserTweets {
             let err_data = String::from_utf8_lossy(&response.body).to_string();
             Err(RecentTweetsError { message: err_data })
         }
+    }
+}
+
+impl std::fmt::Display for TweetCountsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, count) in self.data.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+
+            write!(
+                f,
+                "Start: {}\nEnd: {}\nTweet count: {}",
+                count.start, count.end, count.tweet_count
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_recent_tweet_counts_url_uses_recent_counts_endpoint() {
+        let endpoint = RecentTweetCounts::new("rustlang");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/counts/recent");
     }
 }
