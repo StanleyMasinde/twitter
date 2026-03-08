@@ -142,6 +142,8 @@ enum ListsEnum {
         /// The list id
         #[arg(long)]
         list_id: String,
+    },
+
     /// Fetch the lists the current authenticated user belongs to
     Memberships {
         /// Number of results to fetch
@@ -542,6 +544,12 @@ pub fn run() {
                             } else {
                                 println!("Removed current user from the list.");
                             }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Memberships { max_results } => {
                 let lists = twitter::lists::ListMemberships::current_user()
                     .map(|lists| lists.max_results(max_results));
