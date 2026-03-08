@@ -566,6 +566,13 @@ enum UsersEnum {
         #[arg(long)]
         target_user_id: String,
     },
+
+    /// Unfollow a user for the current authenticated user
+    Unfollow {
+        /// The target user id to unfollow
+        #[arg(long)]
+        target_user_id: String,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1613,6 +1620,23 @@ pub fn run() {
                                 println!("Follow request sent.");
                             } else {
                                 eprintln!("User was not followed.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::Unfollow { target_user_id } => {
+                let unfollow = twitter::follows::DeleteFollow::for_current_user(target_user_id);
+
+                match unfollow {
+                    Ok(unfollow) => match unfollow.send() {
+                        Ok(ok) => {
+                            if ok.content.data.following {
+                                eprintln!("User is still followed.");
+                            } else {
+                                println!("Unfollowed user.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
