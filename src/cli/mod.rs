@@ -226,6 +226,17 @@ enum ListsEnum {
         max_results: u8,
     },
 
+    /// Add a user to a list
+    AddMember {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+
+        /// The user id to add
+        #[arg(long)]
+        user_id: String,
+    },
+
     /// Remove the current authenticated user from a list
     RemoveMember {
         /// The list id
@@ -850,6 +861,20 @@ pub fn run() {
                         }
 
                         println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            ListsEnum::AddMember { list_id, user_id } => {
+                let add = twitter::lists::CreateListMember::new(list_id, user_id);
+
+                match add.send() {
+                    Ok(ok) => {
+                        if ok.content.data.is_member {
+                            println!("Added user to the list.");
+                        } else {
+                            eprintln!("User was not added to the list.");
+                        }
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }
