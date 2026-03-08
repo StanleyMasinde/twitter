@@ -12,6 +12,7 @@ pub mod media;
 pub(crate) mod mentions;
 pub(crate) mod mutes;
 pub(crate) mod retweets;
+pub(crate) mod streams;
 pub(crate) mod timeline;
 pub mod tweet;
 pub(crate) mod tweets;
