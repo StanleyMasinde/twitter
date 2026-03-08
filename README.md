@@ -361,6 +361,13 @@ User-scoped mute commands use the current authenticated user automatically.
 twitter mutes delete --target-user-id 1234567890
 ```
 
+### Blocks
+#### Unblock a user
+User-scoped block commands use the current authenticated user automatically.
+```bash
+twitter blocks delete --target-user-id 1234567890
+```
+
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash
