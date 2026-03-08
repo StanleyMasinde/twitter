@@ -86,6 +86,27 @@ pub struct CreateFollow {
     target_user_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DeleteFollowData {
+    pub following: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteFollowResponse {
+    pub data: DeleteFollowData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteFollowError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct DeleteFollow {
+    source_user_id: String,
+    target_user_id: String,
+}
+
 #[derive(Serialize)]
 struct CreateFollowBody<'a> {
     target_user_id: &'a str,
@@ -286,6 +307,52 @@ impl CreateFollow {
     }
 }
 
+impl DeleteFollow {
+    pub fn for_current_user(target_user_id: impl Into<String>) -> Result<Self, DeleteFollowError> {
+        let source_user_id =
+            get_current_user_id().map_err(|message| DeleteFollowError { message })?;
+        Ok(Self {
+            source_user_id,
+            target_user_id: target_user_id.into(),
+        })
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/following/{}",
+            self.source_user_id, self.target_user_id
+        )
+    }
+
+    pub fn send(&self) -> Result<Response<DeleteFollowResponse>, DeleteFollowError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .delete()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| DeleteFollowError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let follow_data: DeleteFollowResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| DeleteFollowError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: follow_data,
+            })
+        } else {
+            Err(DeleteFollowError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +379,18 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/following");
+    }
+
+    #[test]
+    fn test_delete_follow_url_uses_current_user_and_target_id() {
+        let endpoint = DeleteFollow {
+            source_user_id: "123".to_string(),
+            target_user_id: "456".to_string(),
+        };
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/users/123/following/456"
+        );
     }
 }
