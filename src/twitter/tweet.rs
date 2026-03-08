@@ -10,6 +10,21 @@ pub struct CreateTweetErr {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DeleteTweetData {
+    pub deleted: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteTweetResponse {
+    pub data: DeleteTweetData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteTweetErr {
+    pub message: String,
+}
+
 #[derive(Default, Serialize, Deserialize)]
 pub struct TweetBody {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,6 +67,11 @@ pub struct Tweet<'t> {
     separator: &'t str,
     payload: TweetBody,
     tweet_parts: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct DeleteTweet {
+    tweet_id: String,
 }
 
 impl<'t> FromStr for Tweet<'t> {
@@ -147,6 +167,45 @@ impl<'t> Tweet<'t> {
     }
 }
 
+impl DeleteTweet {
+    pub fn new(tweet_id: impl Into<String>) -> Self {
+        Self {
+            tweet_id: tweet_id.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/tweets/{}", self.tweet_id)
+    }
+
+    pub fn send(&self) -> Result<Response<DeleteTweetResponse>, DeleteTweetErr> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .delete()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|e| DeleteTweetErr {
+                message: e.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let res_data: DeleteTweetResponse =
+                serde_json::from_slice(&response.body).map_err(|e| DeleteTweetErr {
+                    message: e.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: res_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(DeleteTweetErr { message: err_data })
+        }
+    }
+}
+
 impl<'t> TwitterApi for Tweet<'t> {
     fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
@@ -226,5 +285,12 @@ mod tests {
         let tweet = "This is a normal tweet.".to_string();
 
         assert!(!tweet_2.is_thread(&tweet));
+    }
+
+    #[test]
+    fn test_delete_tweet_url_uses_tweet_id() {
+        let endpoint = DeleteTweet::new("123");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/123");
     }
 }
