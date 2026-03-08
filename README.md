@@ -531,6 +531,59 @@ Fetch tweets liked by the currently authenticated user.
 twitter likes tweets
 ```
 
+### Users
+Fetch a single user by id or username.
+```bash
+twitter users by-id --id 2244994945
+twitter users by-username --username jack
+```
+
+Fetch multiple users by ids or usernames.
+```bash
+twitter users by-ids --ids 2244994945,6253282
+twitter users by-usernames --usernames jack,openai
+```
+
+Fetch follow relationships.
+```bash
+twitter users following --id 2244994945
+twitter users followers --id 2244994945
+```
+
+Manage follows for the currently authenticated user.
+```bash
+twitter users follow --target-user-id 6253282
+twitter users unfollow --target-user-id 6253282
+```
+
+### Bookmarks
+Fetch bookmarks and manage them for the current authenticated user.
+```bash
+twitter bookmarks list
+twitter bookmarks create --tweet-id 1234567890
+twitter bookmarks delete --tweet-id 1234567890
+```
+
+List bookmark folders and fetch the tweets in a folder.
+```bash
+twitter bookmarks folders
+twitter bookmarks folder --folder-id 1234567890
+```
+
+### Streams
+List and manage filtered stream rules.
+```bash
+twitter streams rules list
+twitter streams rules add --value "rustlang has:links" --tag "rust"
+twitter streams rules delete --ids 1234567890
+```
+
+Connect to the filtered stream.
+```bash
+twitter streams connect
+twitter streams connect --backfill-minutes 5
+```
+
 ### Current user
 Fetch details for the currently authenticated user. 
 ```bash
