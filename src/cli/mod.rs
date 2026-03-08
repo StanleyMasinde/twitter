@@ -137,6 +137,13 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Add the current authenticated user to a list
+    AddMember {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+    },
+
     /// Fetch the lists the current authenticated user belongs to
     Memberships {
         /// Number of results to fetch
@@ -526,6 +533,23 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::AddMember { list_id } => {
+                let add = twitter::lists::AddListMember::for_current_user(list_id);
+
+                match add {
+                    Ok(add) => match add.send() {
+                        Ok(ok) => {
+                            if ok.content.data.is_member {
+                                println!("Added current user to the list.");
+                            } else {
+                                eprintln!("Current user was not added to the list.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Memberships { max_results } => {
                 let lists = twitter::lists::ListMemberships::current_user()
                     .map(|lists| lists.max_results(max_results));

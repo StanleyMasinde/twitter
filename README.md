@@ -260,6 +260,12 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Add yourself to a list
+User-scoped list commands use the current authenticated user automatically.
+```bash
+twitter lists add-member --list-id 1234567890
+```
+
 #### Show the lists you belong to
 The CLI resolves the current authenticated user automatically for user-scoped list endpoints.
 ```bash
