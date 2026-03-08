@@ -242,6 +242,13 @@ enum DmsEnum {
         max_results: u8,
     },
 
+    /// Show DM events for the current authenticated user
+    Events {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Create a DM conversation and send the initial message
     Create {
         /// Comma-separated participant ids
@@ -844,6 +851,25 @@ pub fn run() {
 
                         println!("{}", ok.content);
                     }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            DmsEnum::Events { max_results } => {
+                let events = twitter::dms::UserDmEvents::current_user()
+                    .map(|events| events.max_results(max_results));
+
+                match events {
+                    Ok(events) => match events.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No DM events found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

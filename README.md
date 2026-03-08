@@ -320,6 +320,12 @@ twitter dms conversation-events --conversation-id 1234567890-987654321
 twitter dms conversation-events --conversation-id 1234567890-987654321 --max-results 25
 ```
 
+#### Show your DM events
+```bash
+twitter dms events
+twitter dms events --max-results 25
+```
+
 #### Create a DM conversation
 ```bash
 twitter dms create --participant-ids 123456,987654 --text "hello from the CLI"
