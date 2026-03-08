@@ -210,6 +210,13 @@ enum BookmarksEnum {
         #[arg(long)]
         tweet_id: String,
     },
+
+    /// Remove a bookmark for the current authenticated user
+    Delete {
+        /// The tweet id to remove from bookmarks
+        #[arg(long)]
+        tweet_id: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1091,6 +1098,23 @@ pub fn run() {
                                 println!("Bookmarked tweet.");
                             } else {
                                 eprintln!("Tweet was not bookmarked.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            BookmarksEnum::Delete { tweet_id } => {
+                let bookmark = twitter::bookmarks::DeleteBookmark::for_current_user(tweet_id);
+
+                match bookmark {
+                    Ok(bookmark) => match bookmark.send() {
+                        Ok(ok) => {
+                            if ok.content.data.bookmarked {
+                                eprintln!("Tweet is still bookmarked.");
+                            } else {
+                                println!("Removed bookmark.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
