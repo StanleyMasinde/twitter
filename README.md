@@ -260,6 +260,12 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Show the members of a list
+```bash
+twitter lists members --list-id 1234567890
+twitter lists members --list-id 1234567890 --max-results 25
+```
+
 #### Remove yourself from a list
 User-scoped list commands use the current authenticated user automatically.
 ```bash

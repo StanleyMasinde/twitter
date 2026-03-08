@@ -137,6 +137,17 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Fetch the members of a list
+    Members {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Remove the current authenticated user from a list
     RemoveMember {
         /// The list id
@@ -533,6 +544,24 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::Members {
+                list_id,
+                max_results,
+            } => {
+                let members = twitter::lists::ListMembers::new(list_id).max_results(max_results);
+
+                match members.fetch() {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No list members found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::RemoveMember { list_id } => {
                 let remove = twitter::lists::DeleteListMember::for_current_user(list_id);
 
