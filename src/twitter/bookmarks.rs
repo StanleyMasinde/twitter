@@ -60,6 +60,27 @@ pub struct CreateBookmark {
     tweet_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DeleteBookmarkData {
+    pub bookmarked: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteBookmarkResponse {
+    pub data: DeleteBookmarkData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteBookmarkError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct DeleteBookmark {
+    user_id: String,
+    tweet_id: String,
+}
+
 #[derive(Serialize)]
 struct CreateBookmarkBody<'a> {
     tweet_id: &'a str,
@@ -176,6 +197,51 @@ impl CreateBookmark {
     }
 }
 
+impl DeleteBookmark {
+    pub fn for_current_user(tweet_id: impl Into<String>) -> Result<Self, DeleteBookmarkError> {
+        let user_id = get_current_user_id().map_err(|message| DeleteBookmarkError { message })?;
+        Ok(Self {
+            user_id,
+            tweet_id: tweet_id.into(),
+        })
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/bookmarks/{}",
+            self.user_id, self.tweet_id
+        )
+    }
+
+    pub fn send(&self) -> Result<Response<DeleteBookmarkResponse>, DeleteBookmarkError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .delete()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| DeleteBookmarkError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let bookmark_data: DeleteBookmarkResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| DeleteBookmarkError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: bookmark_data,
+            })
+        } else {
+            Err(DeleteBookmarkError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,5 +264,18 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/bookmarks");
+    }
+
+    #[test]
+    fn test_delete_bookmark_url_uses_current_user_and_tweet_id() {
+        let endpoint = DeleteBookmark {
+            user_id: "123".to_string(),
+            tweet_id: "456".to_string(),
+        };
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/users/123/bookmarks/456"
+        );
     }
 }
