@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, path::PathBuf, str::FromStr};
 
 use jiff::{Timestamp, ToSpan};
 use parse_datetime::parse_datetime;
@@ -197,7 +197,7 @@ impl Schedule {
     }
 
     fn open_connection() -> Connection {
-        let data_dir = match dirs::data_dir() {
+        let data_dir = match schedule_data_dir() {
             Some(path) => path,
             None => gracefully_exit("Failed to locate a data directory for scheduled tweets."),
         };
@@ -291,6 +291,37 @@ impl Schedule {
     }
 }
 
+fn schedule_data_dir() -> Option<PathBuf> {
+    #[cfg(test)]
+    if let Some(path) = test_data_dir_override() {
+        return Some(path);
+    }
+
+    dirs::data_dir()
+}
+
+#[cfg(test)]
+fn test_data_dir_override() -> Option<PathBuf> {
+    let lock = test_data_dir_lock();
+    lock.lock().ok().and_then(|guard| guard.clone())
+}
+
+#[cfg(test)]
+fn set_test_data_dir_override(path: PathBuf) {
+    let lock = test_data_dir_lock();
+    if let Ok(mut guard) = lock.lock() {
+        *guard = Some(path);
+    }
+}
+
+#[cfg(test)]
+fn test_data_dir_lock() -> &'static std::sync::Mutex<Option<PathBuf>> {
+    use std::sync::{Mutex, OnceLock};
+
+    static TEST_DATA_DIR: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+    TEST_DATA_DIR.get_or_init(|| Mutex::new(None))
+}
+
 #[cfg(test)]
 mod test {
     use std::{env, fs};
@@ -303,13 +334,8 @@ mod test {
     fn setup_test_data_dir() {
         let base = env::temp_dir().join("twitter-cli-tests");
         let data_dir = base.join("data");
-        let home_dir = base.join("home");
         let _ = fs::create_dir_all(&data_dir);
-        let _ = fs::create_dir_all(&home_dir);
-        unsafe {
-            env::set_var("XDG_DATA_HOME", data_dir);
-            env::set_var("HOME", home_dir);
-        }
+        super::set_test_data_dir_override(data_dir);
     }
 
     #[test]
