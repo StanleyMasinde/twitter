@@ -642,6 +642,24 @@ enum StreamsEnum {
 enum StreamRulesEnum {
     /// List active stream rules
     List {},
+
+    /// Add a stream rule
+    Add {
+        /// The rule value
+        #[arg(long)]
+        value: String,
+
+        /// Optional rule tag
+        #[arg(long)]
+        tag: Option<String>,
+    },
+
+    /// Delete stream rules by ids
+    Delete {
+        /// Comma-separated rule ids
+        #[arg(long, value_delimiter = ',')]
+        ids: Vec<String>,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1734,6 +1752,28 @@ pub fn run() {
 
                             println!("{}", ok.content);
                         }
+                        Err(err) => eprintln!("{}", err.message),
+                    }
+                }
+                StreamRulesEnum::Add { value, tag } => {
+                    let create = twitter::streams::AddStreamRule::new(value, tag);
+
+                    match create.send() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("Stream rule request sent.");
+                            } else {
+                                println!("{}", ok.content.data[0].value);
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    }
+                }
+                StreamRulesEnum::Delete { ids } => {
+                    let delete = twitter::streams::DeleteStreamRules::new(ids);
+
+                    match delete.send() {
+                        Ok(_) => println!("Deleted stream rules."),
                         Err(err) => eprintln!("{}", err.message),
                     }
                 }
