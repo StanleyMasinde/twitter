@@ -81,6 +81,43 @@ pub struct DeleteBookmark {
     tweet_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BookmarkFolder {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub tweet_count: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BookmarkFoldersMeta {
+    #[allow(dead_code)]
+    pub result_count: u32,
+    #[allow(dead_code)]
+    pub next_token: Option<String>,
+    #[allow(dead_code)]
+    pub previous_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BookmarkFoldersResponse {
+    #[serde(default)]
+    pub data: Vec<BookmarkFolder>,
+    #[allow(dead_code)]
+    pub meta: Option<BookmarkFoldersMeta>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BookmarkFoldersError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct BookmarkFolders {
+    user_id: String,
+    max_results: u8,
+}
+
 #[derive(Serialize)]
 struct CreateBookmarkBody<'a> {
     tweet_id: &'a str,
@@ -242,6 +279,78 @@ impl DeleteBookmark {
     }
 }
 
+impl Display for BookmarkFoldersResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, folder) in self.data.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+
+            write!(f, "Folder Id: {}\nName: {}", folder.id, folder.name)?;
+            if let Some(tweet_count) = folder.tweet_count {
+                write!(f, "\nTweet count: {}", tweet_count)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl BookmarkFolders {
+    pub fn current_user() -> Result<Self, BookmarkFoldersError> {
+        let user_id = get_current_user_id().map_err(|message| BookmarkFoldersError { message })?;
+        Ok(Self {
+            user_id,
+            max_results: 10,
+        })
+    }
+
+    pub fn max_results(mut self, max_results: u8) -> Self {
+        self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/bookmarks/folders",
+            self.user_id
+        )
+    }
+
+    pub fn fetch(&self) -> Result<Response<BookmarkFoldersResponse>, BookmarkFoldersError> {
+        let url = self.url();
+        let max_results = self.max_results.to_string();
+        let auth_params =
+            oauth::ParameterList::new([("max_results", &max_results as &dyn Display)]);
+        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("max_results", max_results.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| BookmarkFoldersError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let folder_data: BookmarkFoldersResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| BookmarkFoldersError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: folder_data,
+            })
+        } else {
+            Err(BookmarkFoldersError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,6 +385,19 @@ mod tests {
         assert_eq!(
             endpoint.url(),
             "https://api.x.com/2/users/123/bookmarks/456"
+        );
+    }
+
+    #[test]
+    fn test_bookmark_folders_url_uses_current_user_id() {
+        let endpoint = BookmarkFolders {
+            user_id: "123".to_string(),
+            max_results: 10,
+        };
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/users/123/bookmarks/folders"
         );
     }
 }
