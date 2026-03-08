@@ -207,6 +207,17 @@ enum ListsEnum {
 
 #[derive(Debug, Subcommand)]
 enum RetweetsEnum {
+    /// Show the users who retweeted a tweet
+    By {
+        /// The tweet id
+        #[arg(long)]
+        tweet_id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Create a retweet for the current authenticated user
     Create {
         /// The tweet id to retweet
@@ -711,6 +722,24 @@ pub fn run() {
             }
         },
         Commands::Retweets { command } => match command {
+            RetweetsEnum::By {
+                tweet_id,
+                max_results,
+            } => {
+                let users = twitter::retweets::RetweetedBy::new(tweet_id).max_results(max_results);
+
+                match users.fetch() {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No retweeters found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             RetweetsEnum::Create { tweet_id } => {
                 let create = twitter::retweets::CreateRetweet::for_current_user(tweet_id);
 

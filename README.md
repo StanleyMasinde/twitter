@@ -296,6 +296,12 @@ twitter lists memberships --max-results 25
 ```
 
 ### Retweets
+#### Show who retweeted a tweet
+```bash
+twitter retweets by --tweet-id 1234567890
+twitter retweets by --tweet-id 1234567890 --max-results 25
+```
+
 #### Retweet a tweet
 User-scoped retweet commands use the current authenticated user automatically.
 ```bash
