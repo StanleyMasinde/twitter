@@ -137,6 +137,13 @@ enum ScheduleEnum {
 
 #[derive(Debug, Subcommand)]
 enum LikesEnum {
+    /// Delete a liked tweet for the current authenticated user
+    Delete {
+        /// The tweet id to unlike
+        #[arg(long)]
+        tweet_id: String,
+    },
+
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
 }
@@ -571,6 +578,23 @@ pub fn run() {
             }
         },
         Commands::Likes { command } => match command {
+            LikesEnum::Delete { tweet_id } => {
+                let unlike = twitter::likes::DeleteLike::for_current_user(tweet_id);
+
+                match unlike {
+                    Ok(unlike) => match unlike.send() {
+                        Ok(ok) => {
+                            if ok.content.data.liked {
+                                eprintln!("Tweet is still liked.");
+                            } else {
+                                println!("Removed like.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             LikesEnum::Tweets {} => {
                 let user_id = match utils::get_current_user_id() {
                     Ok(id) => id,

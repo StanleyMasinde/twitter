@@ -410,6 +410,11 @@ twitter mentions
 ```
 
 ### Likes
+Remove a like for the currently authenticated user.
+```bash
+twitter likes delete --tweet-id 1234567890
+```
+
 Fetch tweets liked by the currently authenticated user.
 ```bash
 twitter likes tweets
