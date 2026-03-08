@@ -137,6 +137,21 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Create a list
+    Create {
+        /// The list name
+        #[arg(long)]
+        name: String,
+
+        /// The list description
+        #[arg(long)]
+        description: Option<String>,
+
+        /// Whether the list is private
+        #[arg(long)]
+        private: Option<bool>,
+    },
+
     /// Delete a list
     Delete {
         /// The list id
@@ -551,6 +566,20 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::Create {
+                name,
+                description,
+                private,
+            } => {
+                let create = twitter::lists::CreateList::new(name)
+                    .description(description)
+                    .private(private);
+
+                match create.send() {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Delete { list_id } => {
                 let delete = twitter::lists::DeleteList::new(list_id);
 

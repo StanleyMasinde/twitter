@@ -260,6 +260,13 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Create a list
+```bash
+twitter lists create --name "CLI builders"
+twitter lists create --name "CLI builders" --description "People building CLI tools"
+twitter lists create --name "Private list" --private true
+```
+
 #### Delete a list
 ```bash
 twitter lists delete --list-id 1234567890
