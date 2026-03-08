@@ -106,6 +106,12 @@ enum Commands {
         command: RetweetsEnum,
     },
 
+    /// Mutes
+    Mutes {
+        #[command(subcommand)]
+        command: MutesEnum,
+    },
+
     /// Timeline
     Timeline {
         #[command(subcommand)]
@@ -318,6 +324,16 @@ enum RetweetsEnum {
         /// The tweet id to unretweet
         #[arg(long)]
         tweet_id: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum MutesEnum {
+    /// Unmute a user for the current authenticated user
+    Delete {
+        /// The target user id to unmute
+        #[arg(long)]
+        target_user_id: String,
     },
 }
 
@@ -983,6 +999,25 @@ pub fn run() {
                                 eprintln!("Tweet is still retweeted.");
                             } else {
                                 println!("Removed retweet.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Mutes { command } => match command {
+            MutesEnum::Delete { target_user_id } => {
+                let delete = twitter::mutes::DeleteMute::for_current_user(target_user_id);
+
+                match delete {
+                    Ok(delete) => match delete.send() {
+                        Ok(ok) => {
+                            if ok.content.data.muting {
+                                eprintln!("Current user is still muting that user.");
+                            } else {
+                                println!("Unmuted user.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
