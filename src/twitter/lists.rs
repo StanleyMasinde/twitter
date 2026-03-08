@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::Response,
@@ -66,6 +66,16 @@ pub struct ListMembershipsError {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct CreateListResponse {
+    pub data: ListData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateListError {
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ListMembersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
@@ -92,6 +102,13 @@ pub struct ListMembersError {
 pub struct ListMemberships {
     user_id: String,
     max_results: u8,
+}
+
+#[derive(Debug)]
+pub struct CreateList {
+    name: String,
+    description: Option<String>,
+    private: Option<bool>,
 }
 
 #[derive(Debug)]
@@ -139,6 +156,15 @@ pub struct DeleteListMember {
 #[derive(Debug)]
 pub struct DeleteList {
     list_id: String,
+}
+
+#[derive(Serialize)]
+struct CreateListBody<'a> {
+    name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    private: Option<bool>,
 }
 
 impl ListMemberships {
@@ -190,6 +216,67 @@ impl ListMemberships {
             })
         } else {
             Err(ListMembershipsError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
+impl CreateList {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            description: None,
+            private: None,
+        }
+    }
+
+    pub fn description(mut self, description: Option<String>) -> Self {
+        self.description = description;
+        self
+    }
+
+    pub fn private(mut self, private: Option<bool>) -> Self {
+        self.private = private;
+        self
+    }
+
+    fn url(&self) -> &'static str {
+        "https://api.x.com/2/lists"
+    }
+
+    pub fn send(&self) -> Result<Response<CreateListResponse>, CreateListError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url, &());
+        let body = serde_json::to_string(&CreateListBody {
+            name: self.name.as_str(),
+            description: self.description.as_deref(),
+            private: self.private,
+        })
+        .map_err(|err| CreateListError {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .post()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url)
+            .map_err(|err| CreateListError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: CreateListResponse =
+                serde_json::from_slice(&response.body).map_err(|err| CreateListError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(CreateListError {
                 message: String::from_utf8_lossy(&response.body).to_string(),
             })
         }
@@ -376,6 +463,22 @@ impl Display for ListMembershipsResponse {
     }
 }
 
+impl Display for CreateListResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "List Id: {}\nName: {}", self.data.id, self.data.name)?;
+
+        if let Some(private) = self.data.private {
+            write!(f, "\nPrivate: {}", private)?;
+        }
+
+        if let Some(description) = self.data.description.as_deref() {
+            write!(f, "\nDescription: {}", description)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Display for ListMembersResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -407,6 +510,33 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123/members/456");
+    }
+
+    #[test]
+    fn test_create_list_url_is_lists_collection() {
+        let endpoint = CreateList::new("cli-builders");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/lists");
+    }
+
+    #[test]
+    fn test_create_list_display() {
+        let response = CreateListResponse {
+            data: ListData {
+                id: "42".to_string(),
+                name: "CLI builders".to_string(),
+                owner_id: None,
+                private: Some(false),
+                description: Some("People building CLI tools".to_string()),
+                follower_count: None,
+                member_count: None,
+            },
+        };
+
+        assert_eq!(
+            response.to_string(),
+            "List Id: 42\nName: CLI builders\nPrivate: false\nDescription: People building CLI tools"
+        );
     }
 
     #[test]
