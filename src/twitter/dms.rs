@@ -36,9 +36,32 @@ pub struct CreateConversationError {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SendWithParticipantMessageData {
+    pub dm_conversation_id: String,
+    pub dm_event_id: String,
+    pub text: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SendWithParticipantMessageResponse {
+    pub data: SendWithParticipantMessageData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SendWithParticipantMessageError {
+    pub message: String,
+}
+
 #[derive(Debug)]
 pub struct SendConversationMessage {
     conversation_id: String,
+    text: String,
+}
+
+#[derive(Debug)]
+pub struct SendWithParticipantMessage {
+    participant_id: String,
     text: String,
 }
 
@@ -107,6 +130,61 @@ impl SendConversationMessage {
             })
         } else {
             Err(SendConversationMessageError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
+impl SendWithParticipantMessage {
+    pub fn new(participant_id: impl Into<String>, text: impl Into<String>) -> Self {
+        Self {
+            participant_id: participant_id.into(),
+            text: text.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/dm_conversations/with/{}/messages",
+            self.participant_id
+        )
+    }
+
+    pub fn send(
+        &self,
+    ) -> Result<Response<SendWithParticipantMessageResponse>, SendWithParticipantMessageError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+        let body = serde_json::to_string(&SendConversationMessageBody {
+            text: self.text.as_str(),
+        })
+        .map_err(|err| SendWithParticipantMessageError {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .post()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url.as_str())
+            .map_err(|err| SendWithParticipantMessageError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: SendWithParticipantMessageResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| {
+                SendWithParticipantMessageError {
+                    message: err.to_string(),
+                }
+            })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(SendWithParticipantMessageError {
                 message: String::from_utf8_lossy(&response.body).to_string(),
             })
         }
@@ -183,6 +261,16 @@ impl std::fmt::Display for CreateConversationResponse {
     }
 }
 
+impl std::fmt::Display for SendWithParticipantMessageResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Conversation Id: {}\nMessage Id: {}\nText: {}",
+            self.data.dm_conversation_id, self.data.dm_event_id, self.data.text
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +290,15 @@ mod tests {
         let endpoint = CreateConversation::new(vec!["1".to_string(), "2".to_string()], "hello");
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/dm_conversations");
+    }
+
+    #[test]
+    fn test_send_with_participant_message_url_uses_participant_id() {
+        let endpoint = SendWithParticipantMessage::new("123", "hello");
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/dm_conversations/with/123/messages"
+        );
     }
 }
