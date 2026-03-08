@@ -231,6 +231,17 @@ enum ListsEnum {
 
 #[derive(Debug, Subcommand)]
 enum DmsEnum {
+    /// Show DM events for a conversation
+    ConversationEvents {
+        /// The conversation id
+        #[arg(long)]
+        conversation_id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Show DM events for the current authenticated user
     Events {
         /// Number of results to fetch
@@ -835,6 +846,25 @@ pub fn run() {
             }
         },
         Commands::Dms { command } => match command {
+            DmsEnum::ConversationEvents {
+                conversation_id,
+                max_results,
+            } => {
+                let events = twitter::dms::ConversationDmEvents::new(conversation_id)
+                    .max_results(max_results);
+
+                match events.fetch() {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No conversation DM events found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             DmsEnum::Events { max_results } => {
                 let events = twitter::dms::UserDmEvents::current_user()
                     .map(|events| events.max_results(max_results));
