@@ -88,8 +88,17 @@ enum Commands {
         command: LikesEnum,
     },
 
+    /// Lists
+    Lists {
+        #[command(subcommand)]
+        command: ListsEnum,
+    },
+
     /// Timeline
-    Timeline {},
+    Timeline {
+        #[command(subcommand)]
+        command: TimelineEnum,
+    },
 
     /// Mentions
     Mentions {},
@@ -124,6 +133,23 @@ enum ScheduleEnum {
 enum LikesEnum {
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
+}
+
+#[derive(Debug, Subcommand)]
+enum ListsEnum {
+    /// Fetch the lists the current authenticated user belongs to
+    Memberships {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum TimelineEnum {
+    /// Fetch the reverse-chronological home timeline
+    #[command(visible_alias = "reverse")]
+    ReverseChronological {},
 }
 
 #[derive(Debug, Subcommand)]
@@ -499,39 +525,62 @@ pub fn run() {
                 }
             }
         },
-        Commands::Timeline {} => {
-            let user_id = match utils::get_current_user_id() {
-                Ok(id) => id,
-                Err(err) => {
-                    eprintln!("{err}");
-                    return;
-                }
-            };
+        Commands::Lists { command } => match command {
+            ListsEnum::Memberships { max_results } => {
+                let lists = twitter::lists::ListMemberships::current_user()
+                    .map(|lists| lists.max_results(max_results));
 
-            let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
-            let timeline_res = timeline.fetch();
-            match timeline_res {
-                Ok(ok) => {
-                    let tweets = ok.content.data;
-                    let includes = ok.content.includes;
-                    if tweets.is_empty() {
-                        println!("No tweets found in timeline.");
+                match lists {
+                    Ok(lists) => match lists.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No list memberships found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Timeline { command } => match command {
+            TimelineEnum::ReverseChronological {} => {
+                let user_id = match utils::get_current_user_id() {
+                    Ok(id) => id,
+                    Err(err) => {
+                        eprintln!("{err}");
                         return;
                     }
+                };
 
-                    for tweet in tweets {
-                        println!(
-                            "{}\n",
-                            twitter::TweetCreateResponse {
-                                data: tweet,
-                                includes: includes.clone(),
-                            }
-                        );
+                let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
+                let timeline_res = timeline.fetch();
+                match timeline_res {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found in timeline.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
                     }
+                    Err(err) => eprintln!("{}", err.message),
                 }
-                Err(err) => eprintln!("{}", err.message),
             }
-        }
+        },
         Commands::Mentions {} => {
             let user_id = match utils::get_current_user_id() {
                 Ok(id) => id,

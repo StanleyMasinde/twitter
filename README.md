@@ -258,6 +258,14 @@ No pending scheduled tweets to run.
 
 #### Pair with your OS scheduler
 `schedule run` is intended to be executed regularly by your OS scheduler.
+
+### Lists
+#### Show the lists you belong to
+The CLI resolves the current authenticated user automatically for user-scoped list endpoints.
+```bash
+twitter lists memberships
+twitter lists memberships --max-results 25
+```
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash
@@ -321,7 +329,7 @@ Cleared 3 scheduled tweets.
 ### Timeline
 Fetch your reverse-chronological home timeline.
 ```bash
-twitter timeline
+twitter timeline reverse
 ```
 
 ### Tweet lookup
