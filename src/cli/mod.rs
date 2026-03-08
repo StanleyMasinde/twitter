@@ -112,6 +112,12 @@ enum Commands {
         command: MutesEnum,
     },
 
+    /// Blocks
+    Blocks {
+        #[command(subcommand)]
+        command: BlocksEnum,
+    },
+
     /// Timeline
     Timeline {
         #[command(subcommand)]
@@ -339,6 +345,16 @@ enum MutesEnum {
     /// Unmute a user for the current authenticated user
     Delete {
         /// The target user id to unmute
+        #[arg(long)]
+        target_user_id: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum BlocksEnum {
+    /// Block a user for the current authenticated user
+    Create {
+        /// The target user id to block
         #[arg(long)]
         target_user_id: String,
     },
@@ -1044,6 +1060,25 @@ pub fn run() {
                                 eprintln!("Current user is still muting that user.");
                             } else {
                                 println!("Unmuted user.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Blocks { command } => match command {
+            BlocksEnum::Create { target_user_id } => {
+                let create = twitter::blocks::CreateBlock::for_current_user(target_user_id);
+
+                match create {
+                    Ok(create) => match create.send() {
+                        Ok(ok) => {
+                            if ok.content.data.blocking {
+                                println!("Blocked user.");
+                            } else {
+                                eprintln!("User was not blocked.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
