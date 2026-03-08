@@ -386,6 +386,13 @@ enum TweetsEnum {
         id: String,
     },
 
+    /// Fetch multiple tweets by ids
+    ByIds {
+        /// Comma-separated tweet ids
+        #[arg(long, value_delimiter = ',')]
+        ids: Vec<String>,
+    },
+
     /// Fetch tweets from a user by id
     User {
         /// The id of the user to fetch tweets for
@@ -512,6 +519,30 @@ pub fn run() {
                 let tweet_res = twitter::tweets::TweetLookup::new(id).fetch();
                 match tweet_res {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::ByIds { ids } => {
+                let tweets = twitter::tweets::TweetsLookup::new(ids).fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

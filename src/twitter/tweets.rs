@@ -18,6 +18,11 @@ pub struct TweetLookup {
     tweet_id: String,
 }
 
+#[derive(Debug)]
+pub struct TweetsLookup {
+    tweet_ids: Vec<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RecentTweetsMeta {
     #[allow(dead_code)]
@@ -108,6 +113,57 @@ impl TweetLookup {
         } else {
             let err_data = String::from_utf8_lossy(&response.body).to_string();
             Err(TweetLookupError { message: err_data })
+        }
+    }
+}
+
+impl TweetsLookup {
+    pub fn new(tweet_ids: Vec<String>) -> Self {
+        Self { tweet_ids }
+    }
+
+    fn url(&self) -> &'static str {
+        "https://api.x.com/2/tweets"
+    }
+
+    pub fn fetch(&self) -> Result<Response<RecentTweetsResponse>, RecentTweetsError> {
+        let url = self.url();
+        let ids = self.tweet_ids.join(",");
+        let tweet_fields = TWEET_FIELDS.to_string();
+        let user_fields = USER_FIELDS.to_string();
+        let expansions = AUTHOR_EXPANSION.to_string();
+        let auth_params = oauth::ParameterList::new([
+            ("ids", &ids as &dyn Display),
+            ("tweet.fields", &tweet_fields as &dyn Display),
+            ("user.fields", &user_fields as &dyn Display),
+            ("expansions", &expansions as &dyn Display),
+        ]);
+        let auth_header = oauth_get_header(url, &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("ids", ids.as_str())
+            .query_param_kv("tweet.fields", tweet_fields.as_str())
+            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("expansions", expansions.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url)
+            .map_err(|err| RecentTweetsError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let tweets_data: RecentTweetsResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| RecentTweetsError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: tweets_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(RecentTweetsError { message: err_data })
         }
     }
 }
@@ -280,5 +336,17 @@ impl UserTweets {
             let err_data = String::from_utf8_lossy(&response.body).to_string();
             Err(RecentTweetsError { message: err_data })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tweets_lookup_url_uses_collection_endpoint() {
+        let endpoint = TweetsLookup::new(vec!["1".to_string(), "2".to_string()]);
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets");
     }
 }
