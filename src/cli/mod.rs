@@ -127,6 +127,12 @@ enum Commands {
     /// Mentions
     Mentions {},
 
+    /// Users
+    Users {
+        #[command(subcommand)]
+        command: UsersEnum,
+    },
+
     /// Show information about the current authenticated user
     Me {},
 }
@@ -426,6 +432,16 @@ enum TweetsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u16,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum UsersEnum {
+    /// Fetch a user by id
+    ById {
+        /// The id of the user to fetch
+        #[arg(long)]
+        id: String,
     },
 }
 
@@ -1229,6 +1245,15 @@ pub fn run() {
                 Err(err) => eprintln!("{}", err.message),
             }
         }
+        Commands::Users { command } => match command {
+            UsersEnum::ById { id } => {
+                let user = twitter::user::UserLookup::new(id).fetch();
+                match user {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
         Commands::Me {} => {
             let me_res = twitter::user::me();
             match me_res {
