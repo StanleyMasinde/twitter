@@ -231,6 +231,17 @@ enum ListsEnum {
 
 #[derive(Debug, Subcommand)]
 enum DmsEnum {
+    /// Create a DM conversation and send the initial message
+    Create {
+        /// Comma-separated participant ids
+        #[arg(long, value_delimiter = ',')]
+        participant_ids: Vec<String>,
+
+        /// The initial message text
+        #[arg(long)]
+        text: String,
+    },
+
     /// Send a message to an existing DM conversation
     Send {
         /// The conversation id
@@ -795,6 +806,17 @@ pub fn run() {
             }
         },
         Commands::Dms { command } => match command {
+            DmsEnum::Create {
+                participant_ids,
+                text,
+            } => {
+                let conversation = twitter::dms::CreateConversation::new(participant_ids, text);
+
+                match conversation.send() {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             DmsEnum::Send {
                 conversation_id,
                 text,
