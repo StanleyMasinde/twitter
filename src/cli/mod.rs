@@ -548,6 +548,17 @@ enum UsersEnum {
         #[arg(long, default_value_t = 10)]
         max_results: u8,
     },
+
+    /// Fetch a user's followers
+    Followers {
+        /// The user id to fetch
+        #[arg(long)]
+        id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1561,6 +1572,22 @@ pub fn run() {
                     Ok(ok) => {
                         if ok.content.data.is_empty() {
                             println!("No following users found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::Followers { id, max_results } => {
+                let users = twitter::follows::Followers::new(id)
+                    .max_results(max_results)
+                    .fetch();
+                match users {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No followers found.");
                             return;
                         }
 
