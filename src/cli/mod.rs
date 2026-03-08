@@ -206,7 +206,6 @@ enum RetweetsEnum {
         #[arg(long)]
         tweet_id: String,
     },
-
     /// Delete the current authenticated user's retweet of a tweet
     Delete {
         /// The tweet id to unretweet
