@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
-    utils::{get_current_user_id, oauth_get_header},
+    utils::{get_current_user_id, oauth_get_header, oauth_post_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,32 @@ pub struct BookmarksError {
 pub struct Bookmarks {
     user_id: String,
     max_results: u8,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateBookmarkData {
+    pub bookmarked: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateBookmarkResponse {
+    pub data: CreateBookmarkData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateBookmarkError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct CreateBookmark {
+    user_id: String,
+    tweet_id: String,
+}
+
+#[derive(Serialize)]
+struct CreateBookmarkBody<'a> {
+    tweet_id: &'a str,
 }
 
 impl Bookmarks {
@@ -100,6 +127,55 @@ impl Bookmarks {
     }
 }
 
+impl CreateBookmark {
+    pub fn for_current_user(tweet_id: impl Into<String>) -> Result<Self, CreateBookmarkError> {
+        let user_id = get_current_user_id().map_err(|message| CreateBookmarkError { message })?;
+        Ok(Self {
+            user_id,
+            tweet_id: tweet_id.into(),
+        })
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/users/{}/bookmarks", self.user_id)
+    }
+
+    pub fn send(&self) -> Result<Response<CreateBookmarkResponse>, CreateBookmarkError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+        let body = serde_json::to_string(&CreateBookmarkBody {
+            tweet_id: self.tweet_id.as_str(),
+        })
+        .map_err(|err| CreateBookmarkError {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .post()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url.as_str())
+            .map_err(|err| CreateBookmarkError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let bookmark_data: CreateBookmarkResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| CreateBookmarkError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: bookmark_data,
+            })
+        } else {
+            Err(CreateBookmarkError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,6 +185,16 @@ mod tests {
         let endpoint = Bookmarks {
             user_id: "123".to_string(),
             max_results: 10,
+        };
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/bookmarks");
+    }
+
+    #[test]
+    fn test_create_bookmark_url_uses_current_user_id() {
+        let endpoint = CreateBookmark {
+            user_id: "123".to_string(),
+            tweet_id: "456".to_string(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/bookmarks");
