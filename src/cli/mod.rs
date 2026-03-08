@@ -414,6 +414,13 @@ enum MutesEnum {
 
 #[derive(Debug, Subcommand)]
 enum BlocksEnum {
+    /// Block a user for the current authenticated user
+    Create {
+        /// The target user id to block
+        #[arg(long)]
+        target_user_id: String,
+    },
+
     /// Show the users blocked by the current authenticated user
     List {
         /// Number of results to fetch
@@ -1349,6 +1356,23 @@ pub fn run() {
             }
         },
         Commands::Blocks { command } => match command {
+            BlocksEnum::Create { target_user_id } => {
+                let create = twitter::blocks::CreateBlock::for_current_user(target_user_id);
+
+                match create {
+                    Ok(create) => match create.send() {
+                        Ok(ok) => {
+                            if ok.content.data.blocking {
+                                println!("Blocked user.");
+                            } else {
+                                eprintln!("User was not blocked.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             BlocksEnum::List { max_results } => {
                 let users = twitter::blocks::BlockedUsers::current_user()
                     .map(|users| users.max_results(max_results));

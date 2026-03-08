@@ -394,6 +394,12 @@ twitter mutes delete --target-user-id 1234567890
 ```
 
 ### Blocks
+#### Block a user
+User-scoped block commands use the current authenticated user automatically.
+```bash
+twitter blocks create --target-user-id 1234567890
+```
+
 #### Show blocked users
 User-scoped block commands use the current authenticated user automatically.
 ```bash
