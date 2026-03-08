@@ -118,6 +118,13 @@ pub struct BookmarkFolders {
     max_results: u8,
 }
 
+#[derive(Debug)]
+pub struct BookmarkFolderTweets {
+    user_id: String,
+    folder_id: String,
+    max_results: u8,
+}
+
 #[derive(Serialize)]
 struct CreateBookmarkBody<'a> {
     tweet_id: &'a str,
@@ -351,6 +358,72 @@ impl BookmarkFolders {
     }
 }
 
+impl BookmarkFolderTweets {
+    pub fn current_user(folder_id: impl Into<String>) -> Result<Self, BookmarksError> {
+        let user_id = get_current_user_id().map_err(|message| BookmarksError { message })?;
+        Ok(Self {
+            user_id,
+            folder_id: folder_id.into(),
+            max_results: 10,
+        })
+    }
+
+    pub fn max_results(mut self, max_results: u8) -> Self {
+        self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/bookmarks/folders/{}",
+            self.user_id, self.folder_id
+        )
+    }
+
+    pub fn fetch(&self) -> Result<Response<BookmarksResponse>, BookmarksError> {
+        let url = self.url();
+        let max_results = self.max_results;
+        let max_results_query = max_results.to_string();
+        let tweet_fields = TWEET_FIELDS.to_string();
+        let user_fields = USER_FIELDS.to_string();
+        let expansions = AUTHOR_EXPANSION.to_string();
+        let auth_params = oauth::ParameterList::new([
+            ("max_results", &max_results as &dyn Display),
+            ("tweet.fields", &tweet_fields as &dyn Display),
+            ("user.fields", &user_fields as &dyn Display),
+            ("expansions", &expansions as &dyn Display),
+        ]);
+        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("tweet.fields", tweet_fields.as_str())
+            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("expansions", expansions.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| BookmarksError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let bookmarks_data: BookmarksResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| BookmarksError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: bookmarks_data,
+            })
+        } else {
+            Err(BookmarksError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,6 +471,20 @@ mod tests {
         assert_eq!(
             endpoint.url(),
             "https://api.x.com/2/users/123/bookmarks/folders"
+        );
+    }
+
+    #[test]
+    fn test_bookmark_folder_tweets_url_uses_current_user_and_folder_id() {
+        let endpoint = BookmarkFolderTweets {
+            user_id: "123".to_string(),
+            folder_id: "456".to_string(),
+            max_results: 10,
+        };
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/users/123/bookmarks/folders/456"
         );
     }
 }
