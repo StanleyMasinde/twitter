@@ -374,6 +374,12 @@ twitter dms send --conversation-id 1234567890-987654321 --text "hello from the C
 ```
 
 ### Mutes
+#### Mute a user
+User-scoped mute commands use the current authenticated user automatically.
+```bash
+twitter mutes create --target-user-id 1234567890
+```
+
 #### Show muted users
 User-scoped mute commands use the current authenticated user automatically.
 ```bash

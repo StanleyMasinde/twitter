@@ -117,7 +117,6 @@ enum Commands {
         #[command(subcommand)]
         command: BlocksEnum,
     },
-
     /// Timeline
     Timeline {
         #[command(subcommand)]
@@ -391,6 +390,13 @@ enum RetweetsEnum {
 
 #[derive(Debug, Subcommand)]
 enum MutesEnum {
+    /// Mute a user for the current authenticated user
+    Create {
+        /// The target user id to mute
+        #[arg(long)]
+        target_user_id: String,
+    },
+
     /// Show the users muted by the current authenticated user
     List {
         /// Number of results to fetch
@@ -1288,6 +1294,23 @@ pub fn run() {
             }
         },
         Commands::Mutes { command } => match command {
+            MutesEnum::Create { target_user_id } => {
+                let create = twitter::mutes::CreateMute::for_current_user(target_user_id);
+
+                match create {
+                    Ok(create) => match create.send() {
+                        Ok(ok) => {
+                            if ok.content.data.muting {
+                                println!("Muted user.");
+                            } else {
+                                eprintln!("User was not muted.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             MutesEnum::List { max_results } => {
                 let users = twitter::mutes::MutedUsers::current_user()
                     .map(|users| users.max_results(max_results));
