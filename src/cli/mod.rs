@@ -352,6 +352,13 @@ enum MutesEnum {
 
 #[derive(Debug, Subcommand)]
 enum BlocksEnum {
+    /// Show the users blocked by the current authenticated user
+    List {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Unblock a user for the current authenticated user
     Delete {
         /// The target user id to unblock
@@ -1069,6 +1076,25 @@ pub fn run() {
             }
         },
         Commands::Blocks { command } => match command {
+            BlocksEnum::List { max_results } => {
+                let users = twitter::blocks::BlockedUsers::current_user()
+                    .map(|users| users.max_results(max_results));
+
+                match users {
+                    Ok(users) => match users.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No blocked users found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             BlocksEnum::Delete { target_user_id } => {
                 let delete = twitter::blocks::DeleteBlock::for_current_user(target_user_id);
 
