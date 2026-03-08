@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::Deserialize;
 
 use crate::{
@@ -17,6 +19,64 @@ pub struct DeleteListMemberResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteListMemberError {
+    utils::{bearer_auth_header, get_current_user_id},
+};
+
+const LIST_FIELDS: &str = "id,name,owner_id,private,description,follower_count,member_count";
+const LIST_EXPANSIONS: &str = "owner_id";
+const OWNER_USER_FIELDS: &str = "name,username";
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ListUser {
+    pub id: String,
+    pub name: String,
+    pub username: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ListIncludes {
+    #[serde(default)]
+    pub users: Option<Vec<ListUser>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ListData {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub owner_id: Option<String>,
+    #[serde(default)]
+    pub private: Option<bool>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub follower_count: Option<u64>,
+    #[serde(default)]
+    pub member_count: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListMembershipsMeta {
+    #[allow(dead_code)]
+    pub result_count: u32,
+    #[allow(dead_code)]
+    pub next_token: Option<String>,
+    #[allow(dead_code)]
+    pub previous_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListMembershipsResponse {
+    #[serde(default)]
+    pub data: Vec<ListData>,
+    #[serde(default)]
+    pub includes: Option<ListIncludes>,
+    #[allow(dead_code)]
+    pub meta: Option<ListMembershipsMeta>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListMembershipsError {
     pub message: String,
 }
 
@@ -51,12 +111,54 @@ impl DeleteListMember {
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| DeleteListMemberError {
+pub struct ListMemberships {
+    user_id: String,
+    max_results: u8,
+}
+
+impl ListMemberships {
+    pub fn current_user() -> Result<Self, ListMembershipsError> {
+        let user_id = get_current_user_id().map_err(|message| ListMembershipsError { message })?;
+        Ok(Self {
+            user_id,
+            max_results: 10,
+        })
+    }
+
+    pub fn max_results(mut self, max_results: u8) -> Self {
+        self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/users/{}/list_memberships",
+            self.user_id
+        )
+    }
+
+    pub fn fetch(&self) -> Result<Response<ListMembershipsResponse>, ListMembershipsError> {
+        let url = self.url();
+        let max_results = self.max_results.to_string();
+        let authorization = bearer_auth_header();
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("max_results", max_results.as_str())
+            .query_param_kv("list.fields", LIST_FIELDS)
+            .query_param_kv("expansions", LIST_EXPANSIONS)
+            .query_param_kv("user.fields", OWNER_USER_FIELDS)
+            .header(curl_rest::Header::Authorization(authorization.into()))
+            .send(url.as_str())
+            .map_err(|err| ListMembershipsError {
                 message: err.to_string(),
             })?;
 
         if (200..300).contains(&response.status.as_u16()) {
             let data: DeleteListMemberResponse =
                 serde_json::from_slice(&response.body).map_err(|err| DeleteListMemberError {
+            let lists_data: ListMembershipsResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| ListMembershipsError {
                     message: err.to_string(),
                 })?;
             Ok(Response {
@@ -65,9 +167,59 @@ impl DeleteListMember {
             })
         } else {
             Err(DeleteListMemberError {
+                content: lists_data,
+            })
+        } else {
+            Err(ListMembershipsError {
                 message: String::from_utf8_lossy(&response.body).to_string(),
             })
         }
+    }
+}
+
+impl ListMembershipsResponse {
+    fn owner_for(&self, owner_id: &str) -> Option<&ListUser> {
+        let users = self.includes.as_ref()?.users.as_ref()?;
+        users.iter().find(|user| user.id == owner_id)
+    }
+}
+
+impl Display for ListMembershipsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, list) in self.data.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+
+            write!(f, "List Id: {}\nName: {}", list.id, list.name)?;
+
+            if let Some(owner_id) = list.owner_id.as_deref() {
+                if let Some(owner) = self.owner_for(owner_id) {
+                    write!(f, "\nOwner: {} (@{})", owner.name, owner.username)?;
+                } else {
+                    write!(f, "\nOwner Id: {}", owner_id)?;
+                }
+            }
+
+            if let Some(private) = list.private {
+                write!(f, "\nPrivate: {}", private)?;
+            }
+
+            if let Some(member_count) = list.member_count {
+                write!(f, "\nMembers: {}", member_count)?;
+            }
+
+            if let Some(follower_count) = list.follower_count {
+                write!(f, "\nFollowers: {}", follower_count)?;
+            }
+
+            if let Some(description) = list.description.as_deref() {
+                write!(f, "\nDescription: {}", description)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -83,5 +235,30 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123/members/456");
+    fn test_list_memberships_display_with_owner_details() {
+        let response = ListMembershipsResponse {
+            data: vec![ListData {
+                id: "42".to_string(),
+                name: "CLI builders".to_string(),
+                owner_id: Some("7".to_string()),
+                private: Some(false),
+                description: Some("People building CLI tools".to_string()),
+                follower_count: Some(10),
+                member_count: Some(3),
+            }],
+            includes: Some(ListIncludes {
+                users: Some(vec![ListUser {
+                    id: "7".to_string(),
+                    name: "Jane Doe".to_string(),
+                    username: "janedoe".to_string(),
+                }]),
+            }),
+            meta: None,
+        };
+
+        assert_eq!(
+            response.to_string(),
+            "List Id: 42\nName: CLI builders\nOwner: Jane Doe (@janedoe)\nPrivate: false\nMembers: 3\nFollowers: 10\nDescription: People building CLI tools"
+        );
     }
 }

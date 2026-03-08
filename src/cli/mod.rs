@@ -142,6 +142,11 @@ enum ListsEnum {
         /// The list id
         #[arg(long)]
         list_id: String,
+    /// Fetch the lists the current authenticated user belongs to
+    Memberships {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
     },
 }
 
@@ -157,6 +162,13 @@ enum TweetsEnum {
     /// Fetch a tweet by id
     ById {
         /// The id of the tweet to fetch
+        id: String,
+    },
+
+    /// Fetch tweets from a user by id
+    User {
+        /// The id of the user to fetch tweets for
+        #[arg(long)]
         id: String,
     },
 
@@ -279,6 +291,30 @@ pub fn run() {
                 let tweet_res = twitter::tweets::TweetLookup::new(id).fetch();
                 match tweet_res {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::User { id } => {
+                let tweets = twitter::tweets::UserTweets::new(id).max_results(10).fetch();
+                match tweets {
+                    Ok(ok) => {
+                        let tweets = ok.content.data;
+                        let includes = ok.content.includes;
+                        if tweets.is_empty() {
+                            println!("No tweets found.");
+                            return;
+                        }
+
+                        for tweet in tweets {
+                            println!(
+                                "{}\n",
+                                twitter::TweetCreateResponse {
+                                    data: tweet,
+                                    includes: includes.clone(),
+                                }
+                            );
+                        }
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
@@ -506,6 +542,19 @@ pub fn run() {
                             } else {
                                 println!("Removed current user from the list.");
                             }
+            ListsEnum::Memberships { max_results } => {
+                let lists = twitter::lists::ListMemberships::current_user()
+                    .map(|lists| lists.max_results(max_results));
+
+                match lists {
+                    Ok(lists) => match lists.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No list memberships found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },

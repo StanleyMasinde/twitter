@@ -265,6 +265,12 @@ User-scoped list commands use the current authenticated user automatically.
 ```bash
 twitter lists remove-member --list-id 1234567890
 ```
+#### Show the lists you belong to
+The CLI resolves the current authenticated user automatically for user-scoped list endpoints.
+```bash
+twitter lists memberships
+twitter lists memberships --max-results 25
+```
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash
@@ -335,6 +341,12 @@ twitter timeline reverse
 Fetch a specific tweet by id.
 ```bash
 twitter tweets by-id 2006409743426818416
+```
+
+### User tweets
+Fetch tweets from a user by id.
+```bash
+twitter tweets user --id 2244994945
 ```
 
 ### Recent tweet search
