@@ -631,6 +631,13 @@ enum UsersEnum {
 
 #[derive(Debug, Subcommand)]
 enum StreamsEnum {
+    /// Connect to the filtered stream
+    Connect {
+        /// Backfill up to 5 minutes of missed data
+        #[arg(long, value_parser = clap::value_parser!(u8).range(1..=5))]
+        backfill_minutes: Option<u8>,
+    },
+
     /// Manage filtered stream rules
     Rules {
         #[command(subcommand)]
@@ -1739,6 +1746,14 @@ pub fn run() {
             }
         }
         Commands::Streams { command } => match command {
+            StreamsEnum::Connect { backfill_minutes } => {
+                let stream =
+                    twitter::streams::FilteredStream::new().backfill_minutes(backfill_minutes);
+
+                if let Err(err) = stream.connect() {
+                    eprintln!("{}", err.message);
+                }
+            }
             StreamsEnum::Rules { command } => match command {
                 StreamRulesEnum::List {} => {
                     let rules = twitter::streams::StreamRules.fetch();

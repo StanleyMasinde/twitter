@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use curl::easy::{Easy, List};
 use serde::{Deserialize, Serialize};
 
 use crate::{twitter::Response, utils::bearer_auth_header};
@@ -65,6 +66,11 @@ pub struct AddStreamRule {
 #[derive(Debug)]
 pub struct DeleteStreamRules {
     ids: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct FilteredStream {
+    backfill_minutes: Option<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -239,6 +245,91 @@ impl DeleteStreamRules {
     }
 }
 
+impl FilteredStream {
+    pub fn new() -> Self {
+        Self {
+            backfill_minutes: None,
+        }
+    }
+
+    pub fn backfill_minutes(mut self, backfill_minutes: Option<u8>) -> Self {
+        self.backfill_minutes = backfill_minutes;
+        self
+    }
+
+    fn url(&self) -> String {
+        let base = "https://api.x.com/2/tweets/search/stream";
+        match self.backfill_minutes {
+            Some(backfill_minutes) => format!("{base}?backfill_minutes={backfill_minutes}"),
+            None => base.to_string(),
+        }
+    }
+
+    pub fn connect(&self) -> Result<(), StreamRulesError> {
+        let url = self.url();
+        let authorization = bearer_auth_header();
+
+        let mut easy = Easy::new();
+        easy.url(url.as_str()).map_err(|err| StreamRulesError {
+            message: err.to_string(),
+        })?;
+        easy.get(true).map_err(|err| StreamRulesError {
+            message: err.to_string(),
+        })?;
+
+        let mut headers = List::new();
+        headers
+            .append(format!("Authorization: {authorization}").as_str())
+            .map_err(|err| StreamRulesError {
+                message: err.to_string(),
+            })?;
+        headers
+            .append("User-Agent: twitter-cli")
+            .map_err(|err| StreamRulesError {
+                message: err.to_string(),
+            })?;
+        easy.http_headers(headers).map_err(|err| StreamRulesError {
+            message: err.to_string(),
+        })?;
+
+        let mut buffer = Vec::new();
+        {
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    buffer.extend_from_slice(data);
+
+                    while let Some(pos) = buffer.iter().position(|byte| *byte == b'\n') {
+                        let line = buffer.drain(..=pos).collect::<Vec<_>>();
+                        let line = String::from_utf8_lossy(&line);
+                        let line = line.trim();
+                        if !line.is_empty() {
+                            println!("{line}");
+                        }
+                    }
+
+                    Ok(data.len())
+                })
+                .map_err(|err| StreamRulesError {
+                    message: err.to_string(),
+                })?;
+            transfer.perform().map_err(|err| StreamRulesError {
+                message: err.to_string(),
+            })?;
+        }
+
+        if !buffer.is_empty() {
+            let line = String::from_utf8_lossy(&buffer);
+            let line = line.trim();
+            if !line.is_empty() {
+                println!("{line}");
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,6 +361,23 @@ mod tests {
         assert_eq!(
             endpoint.url(),
             "https://api.x.com/2/tweets/search/stream/rules"
+        );
+    }
+
+    #[test]
+    fn test_filtered_stream_url_uses_stream_endpoint() {
+        let endpoint = FilteredStream::new();
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/search/stream");
+    }
+
+    #[test]
+    fn test_filtered_stream_url_includes_backfill_minutes() {
+        let endpoint = FilteredStream::new().backfill_minutes(Some(5));
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/tweets/search/stream?backfill_minutes=5"
         );
     }
 }
