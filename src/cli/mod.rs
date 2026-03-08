@@ -137,6 +137,13 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Fetch the lists owned by the current authenticated user
+    Owned {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Delete a list
     Delete {
         /// The list id
@@ -551,6 +558,25 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::Owned { max_results } => {
+                let lists = twitter::lists::OwnedLists::current_user()
+                    .map(|lists| lists.max_results(max_results));
+
+                match lists {
+                    Ok(lists) => match lists.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No owned lists found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Delete { list_id } => {
                 let delete = twitter::lists::DeleteList::new(list_id);
 
