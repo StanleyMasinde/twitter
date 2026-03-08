@@ -217,6 +217,13 @@ enum BookmarksEnum {
         #[arg(long)]
         tweet_id: String,
     },
+
+    /// List bookmark folders for the current authenticated user
+    Folders {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1116,6 +1123,25 @@ pub fn run() {
                             } else {
                                 println!("Removed bookmark.");
                             }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            BookmarksEnum::Folders { max_results } => {
+                let folders = twitter::bookmarks::BookmarkFolders::current_user()
+                    .map(|folders| folders.max_results(max_results));
+
+                match folders {
+                    Ok(folders) => match folders.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No bookmark folders found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
