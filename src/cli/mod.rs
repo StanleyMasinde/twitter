@@ -523,6 +523,13 @@ enum UsersEnum {
         #[arg(long, value_delimiter = ',')]
         ids: Vec<String>,
     },
+
+    /// Fetch a user by username
+    ByUsername {
+        /// The username to fetch
+        #[arg(long)]
+        username: String,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1504,6 +1511,13 @@ pub fn run() {
 
                         println!("{}", ok.content);
                     }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::ByUsername { username } => {
+                let user = twitter::user::UserLookupByUsername::new(username).fetch();
+                match user {
+                    Ok(ok) => println!("{}", ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
