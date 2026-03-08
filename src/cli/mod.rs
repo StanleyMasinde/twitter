@@ -143,6 +143,13 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Fetch a list by id
+    ById {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+    },
+
     /// Create a list
     Create {
         /// The list name
@@ -582,6 +589,14 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::ById { list_id } => {
+                let list = twitter::lists::ListLookup::new(list_id);
+
+                match list.fetch() {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Create {
                 name,
                 description,
