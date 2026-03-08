@@ -329,6 +329,13 @@ enum RetweetsEnum {
 
 #[derive(Debug, Subcommand)]
 enum MutesEnum {
+    /// Show the users muted by the current authenticated user
+    List {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Unmute a user for the current authenticated user
     Delete {
         /// The target user id to unmute
@@ -1008,6 +1015,25 @@ pub fn run() {
             }
         },
         Commands::Mutes { command } => match command {
+            MutesEnum::List { max_results } => {
+                let users = twitter::mutes::MutedUsers::current_user()
+                    .map(|users| users.max_results(max_results));
+
+                match users {
+                    Ok(users) => match users.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No muted users found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             MutesEnum::Delete { target_user_id } => {
                 let delete = twitter::mutes::DeleteMute::for_current_user(target_user_id);
 
