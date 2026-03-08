@@ -260,6 +260,13 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Update a list
+```bash
+twitter lists update --list-id 1234567890 --name "Updated name"
+twitter lists update --list-id 1234567890 --description "Updated description"
+twitter lists update --list-id 1234567890 --private true
+```
+
 #### Show the members of a list
 ```bash
 twitter lists members --list-id 1234567890

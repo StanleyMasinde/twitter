@@ -99,6 +99,15 @@ where
     oauth_post_header_for_account(account, url, request)
 }
 
+pub fn oauth_put_header<R>(url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let mut cfg = load_config();
+    let account = cfg.current_account();
+    oauth_put_header_for_account(account, url, request)
+}
+
 pub fn bearer_auth_header() -> String {
     let mut cfg = load_config();
     let account = cfg.current_account();
@@ -237,6 +246,19 @@ where
         account.access_secret.as_str(),
     );
     oauth::post(url, request, &token, HMAC_SHA1)
+}
+
+fn oauth_put_header_for_account<R>(account: &Account, url: &str, request: &R) -> String
+where
+    R: Request + ?Sized,
+{
+    let token = Token::from_parts(
+        account.consumer_key.as_str(),
+        account.consumer_secret.as_str(),
+        account.access_token.as_str(),
+        account.access_secret.as_str(),
+    );
+    oauth::put(url, request, &token, HMAC_SHA1)
 }
 
 fn open_cache_connection() -> Result<Connection, String> {
