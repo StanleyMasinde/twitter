@@ -260,6 +260,11 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Remove yourself from a list
+User-scoped list commands use the current authenticated user automatically.
+```bash
+twitter lists remove-member --list-id 1234567890
+```
 #### Show the lists you belong to
 The CLI resolves the current authenticated user automatically for user-scoped list endpoints.
 ```bash

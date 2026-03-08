@@ -137,6 +137,13 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Remove the current authenticated user from a list
+    RemoveMember {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+    },
+
     /// Fetch the lists the current authenticated user belongs to
     Memberships {
         /// Number of results to fetch
@@ -526,6 +533,23 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::RemoveMember { list_id } => {
+                let remove = twitter::lists::DeleteListMember::for_current_user(list_id);
+
+                match remove {
+                    Ok(remove) => match remove.send() {
+                        Ok(ok) => {
+                            if ok.content.data.is_member {
+                                eprintln!("Current user is still a member of the list.");
+                            } else {
+                                println!("Removed current user from the list.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Memberships { max_results } => {
                 let lists = twitter::lists::ListMemberships::current_user()
                     .map(|lists| lists.max_results(max_results));
