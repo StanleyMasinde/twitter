@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
-    utils::{bearer_auth_header, get_current_user_id, oauth_post_header},
+    utils::{bearer_auth_header, get_current_user_id, oauth_post_header, oauth_put_header},
 };
 
 const LIST_FIELDS: &str = "id,name,owner_id,private,description,follower_count,member_count";
@@ -215,6 +215,21 @@ pub struct DeleteListMemberError {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateListData {
+    pub updated: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateListResponse {
+    pub data: UpdateListData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateListError {
+    pub message: String,
+}
+
 #[derive(Debug)]
 pub struct DeleteListMember {
     list_id: String,
@@ -235,11 +250,28 @@ struct CreateListBody<'a> {
     private: Option<bool>,
 }
 
+#[derive(Debug)]
+pub struct UpdateList {
+    list_id: String,
+    name: Option<String>,
+    description: Option<String>,
+    private: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct UpdateListBody<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    private: Option<bool>,
+}
+
 #[derive(Serialize)]
 struct CreateListMemberBody<'a> {
     user_id: &'a str,
 }
-
 impl ListMemberships {
     pub fn current_user() -> Result<Self, ListMembershipsError> {
         let user_id = get_current_user_id().map_err(|message| ListMembershipsError { message })?;
@@ -601,6 +633,77 @@ impl DeleteListMember {
     }
 }
 
+impl UpdateList {
+    pub fn new(list_id: impl Into<String>) -> Self {
+        Self {
+            list_id: list_id.into(),
+            name: None,
+            description: None,
+            private: None,
+        }
+    }
+
+    pub fn name(mut self, name: Option<String>) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn description(mut self, description: Option<String>) -> Self {
+        self.description = description;
+        self
+    }
+
+    pub fn private(mut self, private: Option<bool>) -> Self {
+        self.private = private;
+        self
+    }
+
+    pub fn has_changes(&self) -> bool {
+        self.name.is_some() || self.description.is_some() || self.private.is_some()
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/lists/{}", self.list_id)
+    }
+
+    pub fn send(&self) -> Result<Response<UpdateListResponse>, UpdateListError> {
+        let url = self.url();
+        let auth_header = oauth_put_header(url.as_str(), &());
+        let body = serde_json::to_string(&UpdateListBody {
+            name: self.name.as_deref(),
+            description: self.description.as_deref(),
+            private: self.private,
+        })
+        .map_err(|err| UpdateListError {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .put()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url.as_str())
+            .map_err(|err| UpdateListError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: UpdateListResponse =
+                serde_json::from_slice(&response.body).map_err(|err| UpdateListError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(UpdateListError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 impl DeleteList {
     pub fn new(list_id: impl Into<String>) -> Self {
         Self {
@@ -755,6 +858,13 @@ mod tests {
     }
 
     #[test]
+    fn test_update_list_url_uses_list_id() {
+        let endpoint = UpdateList::new("123");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123");
+    }
+
+    #[test]
     fn test_list_lookup_url_uses_list_id() {
         let endpoint = ListLookup::new("123");
 
@@ -788,6 +898,15 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123");
+    }
+
+    #[test]
+    fn test_update_list_has_changes_only_when_fields_present() {
+        let unchanged = UpdateList::new("123");
+        let changed = UpdateList::new("123").name(Some("renamed".to_string()));
+
+        assert!(!unchanged.has_changes());
+        assert!(changed.has_changes());
     }
 
     #[test]

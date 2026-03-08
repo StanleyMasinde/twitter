@@ -214,13 +214,31 @@ enum ListsEnum {
         private: Option<bool>,
     },
 
+    /// Update a list
+    Update {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+
+        /// The new list name
+        #[arg(long)]
+        name: Option<String>,
+
+        /// The new list description
+        #[arg(long)]
+        description: Option<String>,
+
+        /// Whether the list is private
+        #[arg(long)]
+        private: Option<bool>,
+    },
+
     /// Delete a list
     Delete {
         /// The list id
         #[arg(long)]
         list_id: String,
     },
-
     /// Fetch the members of a list
     Members {
         /// The list id
@@ -901,6 +919,33 @@ pub fn run() {
 
                 match create.send() {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            ListsEnum::Update {
+                list_id,
+                name,
+                description,
+                private,
+            } => {
+                let update = twitter::lists::UpdateList::new(list_id)
+                    .name(name)
+                    .description(description)
+                    .private(private);
+
+                if !update.has_changes() {
+                    eprintln!("Provide at least one field to update.");
+                    return;
+                }
+
+                match update.send() {
+                    Ok(ok) => {
+                        if ok.content.data.updated {
+                            println!("Updated list.");
+                        } else {
+                            eprintln!("List was not updated.");
+                        }
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
