@@ -413,7 +413,6 @@ impl UserTweets {
     }
 }
 
-<<<<<<< HEAD
 impl std::fmt::Display for TweetCountsResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, count) in self.data.iter().enumerate() {
@@ -432,24 +431,21 @@ impl std::fmt::Display for TweetCountsResponse {
         Ok(())
     }
 }
-
-=======
->>>>>>> feat/issue-54-get-tweets-api
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-<<<<<<< HEAD
-    fn test_recent_tweet_counts_url_uses_recent_counts_endpoint() {
-        let endpoint = RecentTweetCounts::new("rustlang");
-
-        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/counts/recent");
-=======
     fn test_tweets_lookup_url_uses_collection_endpoint() {
         let endpoint = TweetsLookup::new(vec!["1".to_string(), "2".to_string()]);
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/tweets");
->>>>>>> feat/issue-54-get-tweets-api
+    }
+
+    #[test]
+    fn test_recent_tweet_counts_url_uses_recent_counts_endpoint() {
+        let endpoint = RecentTweetCounts::new("rustlang");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/counts/recent");
     }
 }

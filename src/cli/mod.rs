@@ -438,18 +438,17 @@ enum TweetsEnum {
         id: String,
     },
 
-<<<<<<< HEAD
-    /// Delete a tweet by id
-    Delete {
-        /// The id of the tweet to delete
-        id: String,
-=======
     /// Fetch multiple tweets by ids
     ByIds {
         /// Comma-separated tweet ids
         #[arg(long, value_delimiter = ',')]
         ids: Vec<String>,
->>>>>>> feat/issue-54-get-tweets-api
+    },
+
+    /// Delete a tweet by id
+    Delete {
+        /// The id of the tweet to delete
+        id: String,
     },
 
     /// Fetch tweets from a user by id
@@ -598,17 +597,6 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-<<<<<<< HEAD
-            TweetsEnum::Delete { id } => {
-                let delete = twitter::tweet::DeleteTweet::new(id);
-
-                match delete.send() {
-                    Ok(ok) => {
-                        if ok.content.data.deleted {
-                            println!("Deleted tweet.");
-                        } else {
-                            eprintln!("Tweet was not deleted.");
-=======
             TweetsEnum::ByIds { ids } => {
                 let tweets = twitter::tweets::TweetsLookup::new(ids).fetch();
                 match tweets {
@@ -628,7 +616,20 @@ pub fn run() {
                                     includes: includes.clone(),
                                 }
                             );
->>>>>>> feat/issue-54-get-tweets-api
+                        }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::Delete { id } => {
+                let delete = twitter::tweet::DeleteTweet::new(id);
+
+                match delete.send() {
+                    Ok(ok) => {
+                        if ok.content.data.deleted {
+                            println!("Deleted tweet.");
+                        } else {
+                            eprintln!("Tweet was not deleted.");
                         }
                     }
                     Err(err) => eprintln!("{}", err.message),
