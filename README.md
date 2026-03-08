@@ -260,6 +260,11 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Delete a list
+```bash
+twitter lists delete --list-id 1234567890
+```
+
 #### Show the members of a list
 ```bash
 twitter lists members --list-id 1234567890

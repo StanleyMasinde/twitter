@@ -106,6 +106,21 @@ pub struct DeleteListMemberData {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct DeleteListData {
+    pub deleted: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteListResponse {
+    pub data: DeleteListData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteListError {
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct DeleteListMemberResponse {
     pub data: DeleteListMemberData,
 }
@@ -119,6 +134,11 @@ pub struct DeleteListMemberError {
 pub struct DeleteListMember {
     list_id: String,
     user_id: String,
+}
+
+#[derive(Debug)]
+pub struct DeleteList {
+    list_id: String,
 }
 
 impl ListMemberships {
@@ -270,6 +290,46 @@ impl DeleteListMember {
     }
 }
 
+impl DeleteList {
+    pub fn new(list_id: impl Into<String>) -> Self {
+        Self {
+            list_id: list_id.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/lists/{}", self.list_id)
+    }
+
+    pub fn send(&self) -> Result<Response<DeleteListResponse>, DeleteListError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .delete()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| DeleteListError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: DeleteListResponse =
+                serde_json::from_slice(&response.body).map_err(|err| DeleteListError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(DeleteListError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 impl ListMembershipsResponse {
     fn owner_for(&self, owner_id: &str) -> Option<&ListUser> {
         let users = self.includes.as_ref()?.users.as_ref()?;
@@ -347,6 +407,15 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123/members/456");
+    }
+
+    #[test]
+    fn test_delete_list_url_uses_list_id() {
+        let endpoint = DeleteList {
+            list_id: "123".to_string(),
+        };
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123");
     }
 
     #[test]
