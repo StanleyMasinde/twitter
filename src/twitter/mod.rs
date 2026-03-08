@@ -3,6 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 pub(crate) mod blocks;
+pub(crate) mod bookmarks;
 pub(crate) mod dms;
 pub(crate) mod follows;
 pub(crate) mod likes;
