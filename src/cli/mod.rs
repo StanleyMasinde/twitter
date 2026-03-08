@@ -214,6 +214,13 @@ enum ListsEnum {
         private: Option<bool>,
     },
 
+    /// Fetch the lists owned by the current authenticated user
+    Owned {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Update a list
     Update {
         /// The list id
@@ -919,6 +926,25 @@ pub fn run() {
 
                 match create.send() {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            ListsEnum::Owned { max_results } => {
+                let lists = twitter::lists::OwnedLists::current_user()
+                    .map(|lists| lists.max_results(max_results));
+
+                match lists {
+                    Ok(lists) => match lists.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No owned lists found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

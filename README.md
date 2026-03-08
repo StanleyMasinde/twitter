@@ -272,6 +272,13 @@ twitter lists create --name "CLI builders" --description "People building CLI to
 twitter lists create --name "Private list" --private true
 ```
 
+#### Show the lists you own
+User-scoped list commands use the current authenticated user automatically.
+```bash
+twitter lists owned
+twitter lists owned --max-results 25
+```
+
 #### Delete a list
 ```bash
 twitter lists delete --list-id 1234567890
