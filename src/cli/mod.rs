@@ -137,6 +137,13 @@ enum LikesEnum {
 
 #[derive(Debug, Subcommand)]
 enum ListsEnum {
+    /// Delete a list
+    Delete {
+        /// The list id
+        #[arg(long)]
+        list_id: String,
+    },
+
     /// Fetch the members of a list
     Members {
         /// The list id
@@ -544,6 +551,20 @@ pub fn run() {
             }
         },
         Commands::Lists { command } => match command {
+            ListsEnum::Delete { list_id } => {
+                let delete = twitter::lists::DeleteList::new(list_id);
+
+                match delete.send() {
+                    Ok(ok) => {
+                        if ok.content.data.deleted {
+                            println!("Deleted list.");
+                        } else {
+                            eprintln!("List was not deleted.");
+                        }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             ListsEnum::Members {
                 list_id,
                 max_results,
