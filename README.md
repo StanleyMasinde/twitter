@@ -410,15 +410,20 @@ twitter mentions
 ```
 
 ### Likes
-<<<<<<< HEAD
+Show who liked a tweet.
+```bash
+twitter likes by --tweet-id 1234567890
+twitter likes by --tweet-id 1234567890 --max-results 25
+```
+
 Like a tweet for the currently authenticated user.
 ```bash
 twitter likes create --tweet-id 1234567890
-=======
+```
+
 Remove a like for the currently authenticated user.
 ```bash
 twitter likes delete --tweet-id 1234567890
->>>>>>> main
 ```
 
 Fetch tweets liked by the currently authenticated user.
