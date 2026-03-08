@@ -274,10 +274,7 @@ mod tests {
 
     #[test]
     fn test_blocked_users_fetch_uses_bearer_auth_header() {
-        assert_eq!(
-            format_bearer_auth_header("token"),
-            "Bearer token"
-        );
+        assert_eq!(format_bearer_auth_header("token"), "Bearer token");
     }
 
     #[test]

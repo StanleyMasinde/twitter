@@ -522,11 +522,6 @@ impl CreateListMember {
         }
     }
 
-    pub fn for_current_user(list_id: impl Into<String>) -> Result<Self, CreateListMemberError> {
-        let user_id = get_current_user_id().map_err(|message| CreateListMemberError { message })?;
-        Ok(Self::new(list_id, user_id))
-    }
-
     fn url(&self) -> String {
         format!("https://api.x.com/2/lists/{}/members", self.list_id)
     }
