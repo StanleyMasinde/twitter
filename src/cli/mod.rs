@@ -137,6 +137,17 @@ enum ScheduleEnum {
 
 #[derive(Debug, Subcommand)]
 enum LikesEnum {
+    /// Show the users who liked a tweet
+    By {
+        /// The tweet id
+        #[arg(long)]
+        tweet_id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Like a tweet for the current authenticated user
     Create {
         /// The tweet id to like
@@ -585,6 +596,24 @@ pub fn run() {
             }
         },
         Commands::Likes { command } => match command {
+            LikesEnum::By {
+                tweet_id,
+                max_results,
+            } => {
+                let users = twitter::likes::LikingUsers::new(tweet_id).max_results(max_results);
+
+                match users.fetch() {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No liking users found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             LikesEnum::Create { tweet_id } => {
                 let like = twitter::likes::CreateLike::for_current_user(tweet_id);
 
