@@ -137,6 +137,13 @@ enum ScheduleEnum {
 
 #[derive(Debug, Subcommand)]
 enum LikesEnum {
+    /// Like a tweet for the current authenticated user
+    Create {
+        /// The tweet id to like
+        #[arg(long)]
+        tweet_id: String,
+    },
+
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
 }
@@ -571,6 +578,23 @@ pub fn run() {
             }
         },
         Commands::Likes { command } => match command {
+            LikesEnum::Create { tweet_id } => {
+                let like = twitter::likes::CreateLike::for_current_user(tweet_id);
+
+                match like {
+                    Ok(like) => match like.send() {
+                        Ok(ok) => {
+                            if ok.content.data.liked {
+                                println!("Liked tweet.");
+                            } else {
+                                eprintln!("Tweet was not liked.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
             LikesEnum::Tweets {} => {
                 let user_id = match utils::get_current_user_id() {
                     Ok(id) => id,
