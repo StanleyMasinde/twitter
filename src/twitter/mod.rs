@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
+pub(crate) mod dms;
 pub(crate) mod likes;
 pub(crate) mod lists;
 pub mod media;
