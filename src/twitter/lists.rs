@@ -135,6 +135,27 @@ pub struct ListMembers {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct CreateListMemberData {
+    pub is_member: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateListMemberResponse {
+    pub data: CreateListMemberData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateListMemberError {
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct CreateListMember {
+    list_id: String,
+    user_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct DeleteListMemberData {
     pub is_member: bool,
 }
@@ -182,6 +203,11 @@ struct CreateListBody<'a> {
     description: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     private: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct CreateListMemberBody<'a> {
+    user_id: &'a str,
 }
 
 impl ListMemberships {
@@ -337,6 +363,59 @@ impl CreateList {
             })
         } else {
             Err(CreateListError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
+impl CreateListMember {
+    pub fn new(list_id: impl Into<String>, user_id: impl Into<String>) -> Self {
+        Self {
+            list_id: list_id.into(),
+            user_id: user_id.into(),
+        }
+    }
+
+    pub fn for_current_user(list_id: impl Into<String>) -> Result<Self, CreateListMemberError> {
+        let user_id = get_current_user_id().map_err(|message| CreateListMemberError { message })?;
+        Ok(Self::new(list_id, user_id))
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/lists/{}/members", self.list_id)
+    }
+
+    pub fn send(&self) -> Result<Response<CreateListMemberResponse>, CreateListMemberError> {
+        let url = self.url();
+        let auth_header = oauth_post_header(url.as_str(), &());
+        let body = serde_json::to_string(&CreateListMemberBody {
+            user_id: self.user_id.as_str(),
+        })
+        .map_err(|err| CreateListMemberError {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .post()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url.as_str())
+            .map_err(|err| CreateListMemberError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: CreateListMemberResponse =
+                serde_json::from_slice(&response.body).map_err(|err| CreateListMemberError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(CreateListMemberError {
                 message: String::from_utf8_lossy(&response.body).to_string(),
             })
         }
@@ -673,5 +752,12 @@ mod tests {
             response.to_string(),
             "User Id: 7\nName: Jane Doe\nUsername: @janedoe"
         );
+    }
+
+    #[test]
+    fn test_create_list_member_url_uses_list_id() {
+        let endpoint = CreateListMember::new("123", "456");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123/members");
     }
 }

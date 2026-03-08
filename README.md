@@ -283,6 +283,12 @@ twitter lists members --list-id 1234567890
 twitter lists members --list-id 1234567890 --max-results 25
 ```
 
+#### Add a user to a list
+User-scoped list commands use the current authenticated user automatically.
+```bash
+twitter lists add-member --list-id 1234567890 --user-id 987654321
+```
+
 #### Remove yourself from a list
 User-scoped list commands use the current authenticated user automatically.
 ```bash
