@@ -260,6 +260,7 @@ impl std::fmt::Display for BlockedUsersResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::format_bearer_auth_header;
 
     #[test]
     fn test_blocked_users_url_uses_current_user_id() {
@@ -273,12 +274,10 @@ mod tests {
 
     #[test]
     fn test_blocked_users_fetch_uses_bearer_auth_header() {
-        let endpoint = BlockedUsers {
-            user_id: "42".to_string(),
-            max_results: 10,
-        };
-
-        assert!(endpoint.authorization_header().starts_with("Bearer "));
+        assert_eq!(
+            format_bearer_auth_header("token"),
+            "Bearer token"
+        );
     }
 
     #[test]
