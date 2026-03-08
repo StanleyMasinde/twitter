@@ -88,6 +88,12 @@ enum Commands {
         command: LikesEnum,
     },
 
+    /// Lists
+    Lists {
+        #[command(subcommand)]
+        command: ListsEnum,
+    },
+
     /// Timeline
     Timeline {
         #[command(subcommand)]
@@ -127,6 +133,16 @@ enum ScheduleEnum {
 enum LikesEnum {
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
+}
+
+#[derive(Debug, Subcommand)]
+enum ListsEnum {
+    /// Fetch the lists the current authenticated user belongs to
+    Memberships {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -474,6 +490,27 @@ pub fn run() {
                             );
                         }
                     }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Lists { command } => match command {
+            ListsEnum::Memberships { max_results } => {
+                let lists = twitter::lists::ListMemberships::current_user()
+                    .map(|lists| lists.max_results(max_results));
+
+                match lists {
+                    Ok(lists) => match lists.fetch() {
+                        Ok(ok) => {
+                            if ok.content.data.is_empty() {
+                                println!("No list memberships found.");
+                                return;
+                            }
+
+                            println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
