@@ -314,6 +314,12 @@ twitter retweets delete --tweet-id 1234567890
 ```
 
 ### DMs
+#### Show your DM events
+```bash
+twitter dms events
+twitter dms events --max-results 25
+```
+
 #### Create a DM conversation
 ```bash
 twitter dms create --participant-ids 123456,987654 --text "hello from the CLI"
