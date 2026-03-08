@@ -94,6 +94,11 @@ pub struct AllTweets {
 }
 
 #[derive(Debug)]
+pub struct AllTweetCounts {
+    query: String,
+}
+
+#[derive(Debug)]
 pub struct UserTweets {
     user_id: String,
     max_results: u8,
@@ -353,6 +358,48 @@ impl AllTweets {
     }
 }
 
+impl AllTweetCounts {
+    pub fn new(query: impl Into<String>) -> Self {
+        Self {
+            query: query.into(),
+        }
+    }
+
+    fn url(&self) -> &'static str {
+        "https://api.x.com/2/tweets/counts/all"
+    }
+
+    pub fn fetch(&self) -> Result<Response<TweetCountsResponse>, TweetCountsError> {
+        let url = self.url();
+        let query = self.query.as_str();
+        let auth_params = oauth::ParameterList::new([("query", &query as &dyn Display)]);
+        let auth_header = oauth_get_header(url, &auth_params);
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("query", query)
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url)
+            .map_err(|err| TweetCountsError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let tweets_data: TweetCountsResponse =
+                serde_json::from_slice(&response.body).map_err(|err| TweetCountsError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: tweets_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(TweetCountsError { message: err_data })
+        }
+    }
+}
+
 impl UserTweets {
     pub fn new(user_id: impl Into<String>) -> Self {
         Self {
@@ -447,5 +494,12 @@ mod tests {
         let endpoint = RecentTweetCounts::new("rustlang");
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/counts/recent");
+    }
+
+    #[test]
+    fn test_all_tweet_counts_url_uses_all_counts_endpoint() {
+        let endpoint = AllTweetCounts::new("rustlang");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/counts/all");
     }
 }

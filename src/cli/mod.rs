@@ -486,6 +486,13 @@ enum TweetsEnum {
         #[arg(long, default_value_t = 10)]
         max_results: u16,
     },
+
+    /// Get all-time tweet counts for a search query
+    CountAll {
+        /// Search query
+        #[arg(long)]
+        query: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -721,6 +728,20 @@ pub fn run() {
                                 }
                             );
                         }
+                    }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::CountAll { query } => {
+                let counts = twitter::tweets::AllTweetCounts::new(query).fetch();
+                match counts {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No tweet counts found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }
