@@ -516,6 +516,13 @@ enum UsersEnum {
         #[arg(long)]
         id: String,
     },
+
+    /// Fetch multiple users by ids
+    ByIds {
+        /// Comma-separated user ids
+        #[arg(long, value_delimiter = ',')]
+        ids: Vec<String>,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1483,6 +1490,20 @@ pub fn run() {
                 let user = twitter::user::UserLookup::new(id).fetch();
                 match user {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::ByIds { ids } => {
+                let users = twitter::user::UsersLookup::new(ids).fetch();
+                match users {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No users found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
