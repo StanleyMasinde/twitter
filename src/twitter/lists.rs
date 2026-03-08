@@ -66,6 +66,18 @@ pub struct ListMembershipsError {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ListLookupResponse {
+    pub data: ListData,
+    #[serde(default)]
+    pub includes: Option<ListIncludes>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListLookupError {
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateListResponse {
     pub data: ListData,
 }
@@ -102,6 +114,11 @@ pub struct ListMembersError {
 pub struct ListMemberships {
     user_id: String,
     max_results: u8,
+}
+
+#[derive(Debug)]
+pub struct ListLookup {
+    list_id: String,
 }
 
 #[derive(Debug)]
@@ -216,6 +233,49 @@ impl ListMemberships {
             })
         } else {
             Err(ListMembershipsError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
+impl ListLookup {
+    pub fn new(list_id: impl Into<String>) -> Self {
+        Self {
+            list_id: list_id.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!("https://api.x.com/2/lists/{}", self.list_id)
+    }
+
+    pub fn fetch(&self) -> Result<Response<ListLookupResponse>, ListLookupError> {
+        let url = self.url();
+        let authorization = bearer_auth_header();
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("list.fields", LIST_FIELDS)
+            .query_param_kv("expansions", LIST_EXPANSIONS)
+            .query_param_kv("user.fields", OWNER_USER_FIELDS)
+            .header(curl_rest::Header::Authorization(authorization.into()))
+            .send(url.as_str())
+            .map_err(|err| ListLookupError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let list_data: ListLookupResponse =
+                serde_json::from_slice(&response.body).map_err(|err| ListLookupError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: list_data,
+            })
+        } else {
+            Err(ListLookupError {
                 message: String::from_utf8_lossy(&response.body).to_string(),
             })
         }
@@ -479,6 +539,17 @@ impl Display for CreateListResponse {
     }
 }
 
+impl Display for ListLookupResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let response = ListMembershipsResponse {
+            data: vec![self.data.clone()],
+            includes: self.includes.clone(),
+            meta: None,
+        };
+        write!(f, "{}", response)
+    }
+}
+
 impl Display for ListMembersResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -517,6 +588,13 @@ mod tests {
         let endpoint = CreateList::new("cli-builders");
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists");
+    }
+
+    #[test]
+    fn test_list_lookup_url_uses_list_id() {
+        let endpoint = ListLookup::new("123");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123");
     }
 
     #[test]

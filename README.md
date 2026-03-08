@@ -260,6 +260,11 @@ No pending scheduled tweets to run.
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 ### Lists
+#### Show a list by id
+```bash
+twitter lists by-id --list-id 1234567890
+```
+
 #### Create a list
 ```bash
 twitter lists create --name "CLI builders"
