@@ -249,6 +249,17 @@ enum DmsEnum {
         max_results: u8,
     },
 
+    /// Show DM events with a participant
+    With {
+        /// The participant id
+        #[arg(long)]
+        participant_id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
+
     /// Create a DM conversation and send the initial message
     Create {
         /// Comma-separated participant ids
@@ -870,6 +881,25 @@ pub fn run() {
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            DmsEnum::With {
+                participant_id,
+                max_results,
+            } => {
+                let events =
+                    twitter::dms::ParticipantDmEvents::new(participant_id).max_results(max_results);
+
+                match events.fetch() {
+                    Ok(ok) => {
+                        if ok.content.data.is_empty() {
+                            println!("No participant DM events found.");
+                            return;
+                        }
+
+                        println!("{}", ok.content);
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

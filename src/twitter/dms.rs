@@ -116,6 +116,36 @@ pub struct UserDmEventsError {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ParticipantDmEvent {
+    pub dm_conversation_id: String,
+    pub dm_event_id: String,
+    pub text: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ParticipantDmEventsMeta {
+    #[allow(dead_code)]
+    pub result_count: u32,
+    #[allow(dead_code)]
+    pub next_token: Option<String>,
+    #[allow(dead_code)]
+    pub previous_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ParticipantDmEventsResponse {
+    #[serde(default)]
+    pub data: Vec<ParticipantDmEvent>,
+    #[allow(dead_code)]
+    pub meta: Option<ParticipantDmEventsMeta>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ParticipantDmEventsError {
+    pub message: String,
+}
+
 #[derive(Debug)]
 pub struct SendConversationMessage {
     conversation_id: String,
@@ -131,6 +161,12 @@ pub struct ConversationDmEvents {
 #[derive(Debug)]
 pub struct UserDmEvents {
     user_id: String,
+    max_results: u8,
+}
+
+#[derive(Debug)]
+pub struct ParticipantDmEvents {
+    participant_id: String,
     max_results: u8,
 }
 
@@ -313,6 +349,57 @@ impl UserDmEvents {
     }
 }
 
+impl ParticipantDmEvents {
+    pub fn new(participant_id: impl Into<String>) -> Self {
+        Self {
+            participant_id: participant_id.into(),
+            max_results: 10,
+        }
+    }
+
+    pub fn max_results(mut self, max_results: u8) -> Self {
+        self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://api.x.com/2/dm_conversations/with/{}/dm_events",
+            self.participant_id
+        )
+    }
+
+    pub fn fetch(&self) -> Result<Response<ParticipantDmEventsResponse>, ParticipantDmEventsError> {
+        let url = self.url();
+        let max_results = self.max_results.to_string();
+        let auth_header = oauth_get_header(url.as_str(), &());
+
+        let response = curl_rest::Client::default()
+            .get()
+            .query_param_kv("max_results", max_results.as_str())
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .send(url.as_str())
+            .map_err(|err| ParticipantDmEventsError {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let data: ParticipantDmEventsResponse = serde_json::from_slice(&response.body)
+                .map_err(|err| ParticipantDmEventsError {
+                    message: err.to_string(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: data,
+            })
+        } else {
+            Err(ParticipantDmEventsError {
+                message: String::from_utf8_lossy(&response.body).to_string(),
+            })
+        }
+    }
+}
+
 impl SendWithParticipantMessage {
     pub fn new(participant_id: impl Into<String>, text: impl Into<String>) -> Self {
         Self {
@@ -486,6 +573,25 @@ impl std::fmt::Display for UserDmEventsResponse {
     }
 }
 
+impl std::fmt::Display for ParticipantDmEventsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, event) in self.data.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+
+            write!(
+                f,
+                "Conversation Id: {}\nMessage Id: {}\nText: {}",
+                event.dm_conversation_id, event.dm_event_id, event.text
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -535,5 +641,15 @@ mod tests {
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/dm_events");
+    }
+
+    #[test]
+    fn test_participant_dm_events_url_uses_participant_id() {
+        let endpoint = ParticipantDmEvents::new("123");
+
+        assert_eq!(
+            endpoint.url(),
+            "https://api.x.com/2/dm_conversations/with/123/dm_events"
+        );
     }
 }
