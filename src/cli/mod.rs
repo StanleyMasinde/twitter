@@ -231,6 +231,10 @@ enum ListsEnum {
         /// The list id
         #[arg(long)]
         list_id: String,
+
+        /// The user id to remove. Defaults to the current authenticated user.
+        #[arg(long)]
+        user_id: Option<String>,
     },
 
     /// Fetch the lists the current authenticated user belongs to
@@ -854,16 +858,19 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            ListsEnum::RemoveMember { list_id } => {
-                let remove = twitter::lists::DeleteListMember::for_current_user(list_id);
+            ListsEnum::RemoveMember { list_id, user_id } => {
+                let remove = match user_id {
+                    Some(user_id) => Ok(twitter::lists::DeleteListMember::new(list_id, user_id)),
+                    None => twitter::lists::DeleteListMember::for_current_user(list_id),
+                };
 
                 match remove {
                     Ok(remove) => match remove.send() {
                         Ok(ok) => {
                             if ok.content.data.is_member {
-                                eprintln!("Current user is still a member of the list.");
+                                eprintln!("User is still a member of the list.");
                             } else {
-                                println!("Removed current user from the list.");
+                                println!("Removed user from the list.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),

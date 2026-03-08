@@ -393,12 +393,16 @@ impl ListMembers {
 }
 
 impl DeleteListMember {
+    pub fn new(list_id: impl Into<String>, user_id: impl Into<String>) -> Self {
+        Self {
+            list_id: list_id.into(),
+            user_id: user_id.into(),
+        }
+    }
+
     pub fn for_current_user(list_id: impl Into<String>) -> Result<Self, DeleteListMemberError> {
         let user_id = get_current_user_id().map_err(|message| DeleteListMemberError { message })?;
-        Ok(Self {
-            list_id: list_id.into(),
-            user_id,
-        })
+        Ok(Self::new(list_id, user_id))
     }
 
     fn url(&self) -> String {
