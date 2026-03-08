@@ -386,6 +386,12 @@ enum TweetsEnum {
         id: String,
     },
 
+    /// Delete a tweet by id
+    Delete {
+        /// The id of the tweet to delete
+        id: String,
+    },
+
     /// Fetch tweets from a user by id
     User {
         /// The id of the user to fetch tweets for
@@ -512,6 +518,20 @@ pub fn run() {
                 let tweet_res = twitter::tweets::TweetLookup::new(id).fetch();
                 match tweet_res {
                     Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::Delete { id } => {
+                let delete = twitter::tweet::DeleteTweet::new(id);
+
+                match delete.send() {
+                    Ok(ok) => {
+                        if ok.content.data.deleted {
+                            println!("Deleted tweet.");
+                        } else {
+                            eprintln!("Tweet was not deleted.");
+                        }
+                    }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
