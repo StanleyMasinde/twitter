@@ -109,12 +109,17 @@ impl BlockedUsers {
     pub fn fetch(&self) -> Result<Response<BlockedUsersResponse>, BlockedUsersError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let user_fields = "name,username".to_string();
+        let auth_params = oauth::ParameterList::new([
+            ("max_results", &max_results as &dyn std::fmt::Display),
+            ("user.fields", &user_fields as &dyn std::fmt::Display),
+        ]);
+        let auth_header = oauth_get_header(url.as_str(), &auth_params);
 
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", "name,username")
+            .query_param_kv("user.fields", user_fields.as_str())
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| BlockedUsersError {
