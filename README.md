@@ -347,6 +347,13 @@ twitter dms send-with --participant-id 123456 --text "hello from the CLI"
 twitter dms send --conversation-id 1234567890-987654321 --text "hello from the CLI"
 ```
 
+### Mutes
+#### Unmute a user
+User-scoped mute commands use the current authenticated user automatically.
+```bash
+twitter mutes delete --target-user-id 1234567890
+```
+
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash
