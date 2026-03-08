@@ -1,18 +1,124 @@
-name: Build and test
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.1
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Build docs
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --no-deps
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.1
+
+      - name: Run tests
+        run: cargo test --locked
+
+  smoke:
+    name: Smoke ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux
+
+          - os: macos-latest
+            name: macos
+
+          - os: windows-latest
+            name: windows
+            vcpkg_triplet: x64-windows-static-md
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.1
+
+      - name: Install native deps via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          if (-not (Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found at $vcpkgExe"
+          }
+
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install sqlite3/curl with vcpkg."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Smoke test binary (Unix)
+        if: runner.os != 'Windows'
+        run: ./target/debug/twitter --version
+
+      - name: Smoke test binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\target\debug\twitter.exe --version
+
   build:
     if: github.event_name == 'workflow_dispatch'
+    name: Build ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,46 +148,42 @@ jobs:
             os: windows-11-arm
             name: windows-arm
             vcpkg_triplet: arm64-windows-static-md
+
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.8.0
-    - name: Install native deps via vcpkg (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
-        if (-not $vcpkgRoot) {
-          $vcpkgRoot = "C:\vcpkg"
-        }
-        $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
-        if (-not (Test-Path $vcpkgExe)) {
-          throw "vcpkg.exe not found at $vcpkgExe"
-        }
+      - uses: actions/checkout@v5
 
-        & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
-        if ($LASTEXITCODE -ne 0) {
-          throw "Failed to install sqlite3/curl with vcpkg."
-        }
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
-        "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
-        "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
-    - name: Build
-      run: cargo build --locked --target "${{ matrix.target }}"
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.1
+        with:
+          key: ${{ matrix.target }}
 
-  test:
-    if: github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+      - name: Install native deps via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          if (-not (Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found at $vcpkgExe"
+          }
 
-    steps:
-    - uses: actions/checkout@v4
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.8.0
-    - name: Run tests
-      run: cargo test
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install sqlite3/curl with vcpkg."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+
+      - name: Build
+        run: cargo build --release --locked --target "${{ matrix.target }}"

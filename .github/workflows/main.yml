@@ -15,6 +15,7 @@ concurrency:
 
 env:
   BINARY_NAME: twitter
+  CARGO_TERM_COLOR: always
 
 jobs:
   build:
@@ -67,13 +68,9 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Cache
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2.8.1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.target }}
 
       - name: Install native deps via vcpkg (Windows)
         if: runner.os == 'Windows'
@@ -101,6 +98,15 @@ jobs:
         run: |
           set -euo pipefail
           cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Smoke test binary (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="target/${{ matrix.target }}/release/${BINARY_NAME}"
+          test -f "$bin" || { echo "Binary missing: $bin"; exit 1; }
+          "$bin" --version
 
       - name: Smoke test binary (Windows)
         if: runner.os == 'Windows'
