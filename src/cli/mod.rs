@@ -88,6 +88,12 @@ enum Commands {
         command: LikesEnum,
     },
 
+    /// Bookmarks
+    Bookmarks {
+        #[command(subcommand)]
+        command: BookmarksEnum,
+    },
+
     /// Lists
     Lists {
         #[command(subcommand)]
@@ -187,6 +193,16 @@ enum LikesEnum {
 
     /// Fetch tweets liked by the current authenticated user
     Tweets {},
+}
+
+#[derive(Debug, Subcommand)]
+enum BookmarksEnum {
+    /// Fetch bookmarks for the current authenticated user
+    List {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1024,6 +1040,37 @@ pub fn run() {
                             );
                         }
                     }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Bookmarks { command } => match command {
+            BookmarksEnum::List { max_results } => {
+                let bookmarks = twitter::bookmarks::Bookmarks::current_user()
+                    .map(|bookmarks| bookmarks.max_results(max_results));
+
+                match bookmarks {
+                    Ok(bookmarks) => match bookmarks.fetch() {
+                        Ok(ok) => {
+                            let tweets = ok.content.data;
+                            let includes = ok.content.includes;
+                            if tweets.is_empty() {
+                                println!("No bookmarks found.");
+                                return;
+                            }
+
+                            for tweet in tweets {
+                                println!(
+                                    "{}\n",
+                                    twitter::TweetCreateResponse {
+                                        data: tweet,
+                                        includes: includes.clone(),
+                                    }
+                                );
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
