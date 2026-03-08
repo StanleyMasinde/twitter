@@ -313,6 +313,12 @@ twitter retweets create --tweet-id 1234567890
 twitter retweets delete --tweet-id 1234567890
 ```
 
+### DMs
+#### Send a message to an existing conversation
+```bash
+twitter dms send --conversation-id 1234567890-987654321 --text "hello from the CLI"
+```
+
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash

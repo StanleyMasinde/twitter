@@ -94,6 +94,12 @@ enum Commands {
         command: ListsEnum,
     },
 
+    /// Direct messages
+    Dms {
+        #[command(subcommand)]
+        command: DmsEnum,
+    },
+
     /// Retweets
     Retweets {
         #[command(subcommand)]
@@ -220,6 +226,20 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum DmsEnum {
+    /// Send a message to an existing DM conversation
+    Send {
+        /// The conversation id
+        #[arg(long)]
+        conversation_id: String,
+
+        /// The message text
+        #[arg(long)]
+        text: String,
     },
 }
 
@@ -770,6 +790,19 @@ pub fn run() {
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Dms { command } => match command {
+            DmsEnum::Send {
+                conversation_id,
+                text,
+            } => {
+                let message = twitter::dms::SendConversationMessage::new(conversation_id, text);
+
+                match message.send() {
+                    Ok(ok) => println!("{}", ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
