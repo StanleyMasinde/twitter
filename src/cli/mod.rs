@@ -94,6 +94,12 @@ enum Commands {
         command: ListsEnum,
     },
 
+    /// Retweets
+    Retweets {
+        #[command(subcommand)]
+        command: RetweetsEnum,
+    },
+
     /// Timeline
     Timeline {
         #[command(subcommand)]
@@ -182,6 +188,16 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum RetweetsEnum {
+    /// Delete the current authenticated user's retweet of a tweet
+    Delete {
+        /// The tweet id to unretweet
+        #[arg(long)]
+        tweet_id: String,
     },
 }
 
@@ -642,6 +658,25 @@ pub fn run() {
                             }
 
                             println!("{}", ok.content);
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+        },
+        Commands::Retweets { command } => match command {
+            RetweetsEnum::Delete { tweet_id } => {
+                let delete = twitter::retweets::DeleteRetweet::for_current_user(tweet_id);
+
+                match delete {
+                    Ok(delete) => match delete.send() {
+                        Ok(ok) => {
+                            if ok.content.data.retweeted {
+                                eprintln!("Tweet is still retweeted.");
+                            } else {
+                                println!("Removed retweet.");
+                            }
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
