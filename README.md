@@ -319,6 +319,11 @@ twitter retweets delete --tweet-id 1234567890
 twitter dms create --participant-ids 123456,987654 --text "hello from the CLI"
 ```
 
+#### Send a message by participant id
+```bash
+twitter dms send-with --participant-id 123456 --text "hello from the CLI"
+```
+
 #### Send a message to an existing conversation
 ```bash
 twitter dms send --conversation-id 1234567890-987654321 --text "hello from the CLI"

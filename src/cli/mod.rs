@@ -242,6 +242,17 @@ enum DmsEnum {
         text: String,
     },
 
+    /// Send a message by participant id
+    SendWith {
+        /// The participant id
+        #[arg(long)]
+        participant_id: String,
+
+        /// The message text
+        #[arg(long)]
+        text: String,
+    },
+
     /// Send a message to an existing DM conversation
     Send {
         /// The conversation id
@@ -813,6 +824,17 @@ pub fn run() {
                 let conversation = twitter::dms::CreateConversation::new(participant_ids, text);
 
                 match conversation.send() {
+                    Ok(ok) => println!("{}", ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            DmsEnum::SendWith {
+                participant_id,
+                text,
+            } => {
+                let message = twitter::dms::SendWithParticipantMessage::new(participant_id, text);
+
+                match message.send() {
                     Ok(ok) => println!("{}", ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
