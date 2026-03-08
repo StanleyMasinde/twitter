@@ -559,6 +559,13 @@ enum UsersEnum {
         #[arg(long, default_value_t = 10)]
         max_results: u8,
     },
+
+    /// Follow a user for the current authenticated user
+    Follow {
+        /// The target user id to follow
+        #[arg(long)]
+        target_user_id: String,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -1593,6 +1600,23 @@ pub fn run() {
 
                         println!("{}", ok.content);
                     }
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            UsersEnum::Follow { target_user_id } => {
+                let follow = twitter::follows::CreateFollow::for_current_user(target_user_id);
+
+                match follow {
+                    Ok(follow) => match follow.send() {
+                        Ok(ok) => {
+                            if ok.content.data.following || ok.content.data.pending_follow {
+                                println!("Follow request sent.");
+                            } else {
+                                eprintln!("User was not followed.");
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
