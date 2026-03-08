@@ -203,6 +203,13 @@ enum BookmarksEnum {
         #[arg(long, default_value_t = 10)]
         max_results: u8,
     },
+
+    /// Bookmark a tweet for the current authenticated user
+    Create {
+        /// The tweet id to bookmark
+        #[arg(long)]
+        tweet_id: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1067,6 +1074,23 @@ pub fn run() {
                                         includes: includes.clone(),
                                     }
                                 );
+                            }
+                        }
+                        Err(err) => eprintln!("{}", err.message),
+                    },
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            BookmarksEnum::Create { tweet_id } => {
+                let bookmark = twitter::bookmarks::CreateBookmark::for_current_user(tweet_id);
+
+                match bookmark {
+                    Ok(bookmark) => match bookmark.send() {
+                        Ok(ok) => {
+                            if ok.content.data.bookmarked {
+                                println!("Bookmarked tweet.");
+                            } else {
+                                eprintln!("Tweet was not bookmarked.");
                             }
                         }
                         Err(err) => eprintln!("{}", err.message),
