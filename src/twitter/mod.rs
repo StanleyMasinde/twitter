@@ -6,6 +6,7 @@ pub(crate) mod likes;
 pub(crate) mod lists;
 pub mod media;
 pub(crate) mod mentions;
+pub(crate) mod retweets;
 pub(crate) mod timeline;
 pub mod tweet;
 pub(crate) mod tweets;

@@ -294,6 +294,19 @@ The CLI resolves the current authenticated user automatically for user-scoped li
 twitter lists memberships
 twitter lists memberships --max-results 25
 ```
+
+### Retweets
+#### Retweet a tweet
+User-scoped retweet commands use the current authenticated user automatically.
+```bash
+twitter retweets create --tweet-id 1234567890
+```
+
+#### Remove your retweet
+```bash
+twitter retweets delete --tweet-id 1234567890
+```
+
 Run scheduler jobs as the same user who ran `twitter config --init`.
 First get your installed binary path:
 ```bash
