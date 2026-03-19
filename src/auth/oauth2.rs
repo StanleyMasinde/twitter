@@ -1,5 +1,5 @@
 use oauth2::TokenResponse;
-use std::io;
+use std::{io, process};
 
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, CurlHttpClient,
@@ -50,9 +50,10 @@ impl TokenManager {
             .ok_or("missing state")
             .unwrap();
 
-        // if returned_state != *csrf_token.secret() {
-        // return Err("state mismatch");
-        // }
+        if returned_state != *csrf_token.secret() {
+            println!("CSRF token mismatch");
+            process::exit(1)
+        }
 
         let code = parsed
             .query_pairs()
