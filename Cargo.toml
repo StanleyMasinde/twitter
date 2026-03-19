@@ -24,6 +24,7 @@ parse_datetime = "0.14.0"
 jiff = "0.2.21"
 rusqlite = "0.38.0"
 tabled = "0.20.0"
+oauth2 = { version = "5.0.0", default-features = false, features = ['curl'] }
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

@@ -86,6 +86,8 @@ pub fn init() {
         access_token: "your_access_token".to_string(),
         access_secret: "your_access_secret".to_string(),
         bearer_token: "your_bearer_token".to_string(),
+        client_id: "your_oauth2_client_id".to_string(),
+        client_secret: "your_oauth2.client_secret".to_string(),
     };
 
     let config = Config {
