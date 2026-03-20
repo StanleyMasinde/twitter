@@ -1,7 +1,13 @@
 use crate::constants::TOKEN_TABLE_NAME;
-use oauth2::TokenResponse;
+use jiff::{Timestamp, civil::DateTime, tz::TimeZone};
+use oauth2::{RefreshToken, TokenResponse};
 use rusqlite::{Connection, params};
-use std::{io, process};
+use std::{
+    io,
+    ops::Add,
+    process,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
 
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, CurlHttpClient,
@@ -24,7 +30,7 @@ struct TokenRecord {
     access_token: String,
     refresh_token: String,
     token_type: String,
-    expires_at: i64,
+    expires_at: String,
     created_at: String,
     updated_at: String,
 }
@@ -43,6 +49,11 @@ impl TokenManager {
             "SELECT * from {} WHERE account_id = ? LIMIT 1",
             TOKEN_TABLE_NAME
         );
+        let client = BasicClient::new(ClientId::new(current_account.client_id.clone()))
+            .set_client_secret(ClientSecret::new(current_account.client_secret.clone()))
+            .set_auth_uri(AuthUrl::new("https://x.com/i/oauth2/authorize".to_string()).unwrap())
+            .set_token_uri(TokenUrl::new("https://api.x.com/2/oauth2/token".to_string()).unwrap())
+            .set_redirect_uri(RedirectUrl::new("http://127.0.0.1:3000".to_string()).unwrap());
 
         let token_exists = self
             .connection
@@ -60,6 +71,25 @@ impl TokenManager {
             });
 
         if let Ok(current_token) = token_exists {
+            // check if the token has expired
+            let expiry_time: Timestamp = current_token.expires_at.parse().unwrap();
+            let now = Timestamp::now();
+            if now > expiry_time {
+                let token = client
+                    .exchange_refresh_token(&RefreshToken::new(current_token.refresh_token))
+                    .request(&CurlHttpClient)
+                    .unwrap();
+
+                let token_string = token.access_token().secret();
+
+                let update_token_query =
+                    format!("UPDATE {TOKEN_TABLE_NAME} SET access_token = ? WHERE account_id = ?");
+                self.connection
+                    .execute(&update_token_query, params![token_string, account_id])
+                    .unwrap();
+
+                return token_string.to_string();
+            }
             return current_token.access_token;
         }
 
@@ -127,13 +157,24 @@ impl TokenManager {
             VALUES (?, ?, ?, ?)
             "
         );
+
+        let seconds = token.expires_in().map(|t| t.as_secs()).unwrap_or(0);
+        let expiry_seconds_since_epoch = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .add(Duration::from_secs(seconds))
+            .as_secs() as i64;
+
+        let token_expiry_time = Timestamp::from_second(expiry_seconds_since_epoch)
+            .unwrap()
+            .to_string();
         let db_res = self.connection.execute(
             &insert_query,
             params![
                 account_id,
                 token.access_token().secret(),
                 token.refresh_token().unwrap().secret(),
-                token.expires_in().unwrap().as_secs_f64(),
+                token_expiry_time,
             ],
         );
 
@@ -180,7 +221,7 @@ fn open_connection() -> Connection {
                 refresh_token TEXT,
                 token_type TEXT NOT NULL DEFAULT 'Bearer',
 
-                expires_at INTEGER,
+                expires_at DATETIME,
 
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
