@@ -11,6 +11,9 @@ pub struct Account {
     pub access_token: String,
     pub access_secret: String,
     pub bearer_token: String,
+    // oauth2.0
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -82,6 +85,8 @@ fn test_load_config() {
     access_token = "your_access_token" 
     access_secret = "your_access_secret" 
     bearer_token = "your_bearer_token"
+    client_id = "oauth2 client id"
+    client_secret = "oauth2 client secret"
     "#;
     let test_config = Config::from_str(s).unwrap();
 
@@ -100,6 +105,8 @@ fn gracefully_fail_to_load_account() {
     access_token = "your_access_token" 
     access_secret = "your_access_secret" 
     bearer_token = "your_bearer_token"
+    client_id = "oauth2 client id"
+    client_secret = "oauth2 client secret"
     "#;
     let test_config = Config::from_str(s).unwrap();
 

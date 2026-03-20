@@ -3,6 +3,7 @@ use std::fmt::Display;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::auth::oauth2::TokenManager;
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
     utils::{get_current_user_id, oauth_get_header, oauth_post_header},
@@ -155,13 +156,9 @@ impl Bookmarks {
         let tweet_fields = TWEET_FIELDS.to_string();
         let user_fields = USER_FIELDS.to_string();
         let expansions = AUTHOR_EXPANSION.to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("tweet.fields", &tweet_fields as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-            ("expansions", &expansions as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+
+        let token_manager = TokenManager::new();
+        let access_token = token_manager.get_token();
 
         let response = curl_rest::Client::default()
             .get()
@@ -169,7 +166,9 @@ impl Bookmarks {
             .query_param_kv("tweet.fields", tweet_fields.as_str())
             .query_param_kv("user.fields", user_fields.as_str())
             .query_param_kv("expansions", expansions.as_str())
-            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .header(curl_rest::Header::Authorization(
+                format!("Bearer {}", access_token).into(),
+            ))
             .send(url.as_str())
             .map_err(|err| BookmarksError {
                 message: err.to_string(),
