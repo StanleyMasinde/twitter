@@ -101,6 +101,7 @@ impl TokenManager {
             .add_scope(Scope::new("bookmark.read".to_string()))
             .add_scope(Scope::new("tweet.read".to_string()))
             .add_scope(Scope::new("users.read".to_string()))
+            .add_scope(Scope::new("block.read".to_string()))
             .add_scope(Scope::new("offline.access".to_string()))
             .set_pkce_challenge(pkce_challenge)
             .url();

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::oauth2::TokenManager,
     twitter::Response,
-    utils::{bearer_auth_header, get_current_user_id, oauth_post_header},
+    utils::{get_current_user_id, oauth_post_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -106,21 +107,19 @@ impl BlockedUsers {
         format!("https://api.x.com/2/users/{}/blocking", self.user_id)
     }
 
-    fn authorization_header(&self) -> String {
-        bearer_auth_header()
-    }
-
     pub fn fetch(&self) -> Result<Response<BlockedUsersResponse>, BlockedUsersError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
         let user_fields = "name,username";
-        let authorization = self.authorization_header();
+        let access_token = TokenManager::default().get_token();
 
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results.as_str())
             .query_param_kv("user.fields", user_fields)
-            .header(curl_rest::Header::Authorization(authorization.into()))
+            .header(curl_rest::Header::Authorization(
+                format!("Bearer {}", access_token).into(),
+            ))
             .send(url.as_str())
             .map_err(|err| BlockedUsersError {
                 message: err.to_string(),
