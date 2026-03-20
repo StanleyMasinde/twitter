@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::oauth2::TokenManager,
     twitter::Response,
-    utils::{bearer_auth_header, get_current_user_id, oauth_post_header},
+    utils::{get_current_user_id, oauth_post_header},
 };
 
 #[derive(Debug, Deserialize)]
