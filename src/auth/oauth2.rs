@@ -1,12 +1,12 @@
 use crate::constants::TOKEN_TABLE_NAME;
-use jiff::{Timestamp, civil::DateTime, tz::TimeZone};
+use jiff::Timestamp;
 use oauth2::{RefreshToken, TokenResponse};
 use rusqlite::{Connection, params};
 use std::{
     io,
     ops::Add,
     process,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use oauth2::{
@@ -23,16 +23,16 @@ pub struct TokenManager {
     connection: Connection,
 }
 
-#[derive(Debug)]
 struct TokenRecord {
-    id: u32,
-    account_id: u32,
     access_token: String,
     refresh_token: String,
-    token_type: String,
     expires_at: String,
-    created_at: String,
-    updated_at: String,
+}
+
+impl Default for TokenManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TokenManager {
@@ -59,14 +59,9 @@ impl TokenManager {
             .connection
             .query_one(&exists_query, params![account_id], |row| {
                 Ok(TokenRecord {
-                    id: row.get(0).unwrap(),
-                    account_id: row.get(1).unwrap(),
                     access_token: row.get(2).unwrap(),
                     refresh_token: row.get(3).unwrap(),
-                    token_type: row.get(4).unwrap(),
                     expires_at: row.get(5).unwrap(),
-                    created_at: row.get(6).unwrap(),
-                    updated_at: row.get(7).unwrap(),
                 })
             });
 
@@ -183,11 +178,8 @@ impl TokenManager {
             process::exit(1)
         }
 
-        let access_token = token.access_token().secret().to_owned();
-        access_token
+        token.access_token().secret().to_owned()
     }
-
-    fn save_refresh_token(token: &str) {}
 }
 
 fn open_connection() -> Connection {
