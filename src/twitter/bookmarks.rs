@@ -157,7 +157,8 @@ impl Bookmarks {
         let user_fields = USER_FIELDS.to_string();
         let expansions = AUTHOR_EXPANSION.to_string();
 
-        let access_token = TokenManager::get_token();
+        let token_manager = TokenManager::new();
+        let access_token = token_manager.get_token();
 
         let response = curl_rest::Client::default()
             .get()

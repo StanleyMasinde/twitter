@@ -1,3 +1,4 @@
+use crate::constants::{CACHE_DIR, SCHEDULE_TABLE_NAME};
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 
 use jiff::{Timestamp, ToSpan};
@@ -7,11 +8,7 @@ use rusqlite::{
     types::{FromSql, FromSqlError, ValueRef},
 };
 
-const TABLE_NAME: &str = "scheduled_tweets";
-const CACHE_DIR: &str = "twitter-cli";
-const DB_FILENAME: &str = "db.sqlite3";
-
-use crate::{twitter::tweet::TweetBody, utils::gracefully_exit};
+use crate::{constants::DB_FILENAME, twitter::tweet::TweetBody, utils::gracefully_exit};
 
 #[derive(Debug)]
 pub enum ScheduleStatus {
@@ -116,7 +113,7 @@ impl Schedule {
     pub fn save(self) -> bool {
         let query = format!(
             "
-            INSERT INTO {TABLE_NAME} (
+            INSERT INTO {SCHEDULE_TABLE_NAME} (
                 body,
                 scheduled_for
             ) VALUES (?1, ?2);
@@ -135,12 +132,12 @@ impl Schedule {
     }
 
     pub fn all(&self) -> Vec<ScheduledTweet> {
-        let query = format!("SELECT * from {TABLE_NAME}");
+        let query = format!("SELECT * from {SCHEDULE_TABLE_NAME}");
         self.query_tweets(&query)
     }
 
     pub fn clear(&self) -> usize {
-        let query = format!("DELETE FROM {TABLE_NAME}");
+        let query = format!("DELETE FROM {SCHEDULE_TABLE_NAME}");
         match self.connection.execute(&query, ()) {
             Ok(cleared_rows) => cleared_rows,
             Err(err) => {
@@ -152,24 +149,24 @@ impl Schedule {
 
     pub(crate) fn due(&self) -> Vec<ScheduledTweet> {
         let query = format!(
-            "SELECT * from {TABLE_NAME} WHERE datetime('now') > datetime(scheduled_for) AND status = 'pending'"
+            "SELECT * from {SCHEDULE_TABLE_NAME} WHERE datetime('now') > datetime(scheduled_for) AND status = 'pending'"
         );
         self.query_tweets(&query)
     }
 
     pub(crate) fn failed(&self) -> Vec<ScheduledTweet> {
-        let query = format!("SELECT * from {TABLE_NAME} WHERE status = 'failed'");
+        let query = format!("SELECT * from {SCHEDULE_TABLE_NAME} WHERE status = 'failed'");
         self.query_tweets(&query)
     }
 
     pub(crate) fn sent(&self) -> Vec<ScheduledTweet> {
-        let query = format!("SELECT * from {TABLE_NAME} WHERE status = 'sent'");
+        let query = format!("SELECT * from {SCHEDULE_TABLE_NAME} WHERE status = 'sent'");
         self.query_tweets(&query)
     }
 
     pub(crate) fn mark_sent(&self, id: u32) {
         let query = format!(
-            "UPDATE {TABLE_NAME}
+            "UPDATE {SCHEDULE_TABLE_NAME}
              SET status = 'sent',
                  sent_at = CURRENT_TIMESTAMP,
                  last_error = NULL,
@@ -183,7 +180,7 @@ impl Schedule {
 
     pub(crate) fn mark_failed(&self, id: u32, error_message: &str) {
         let query = format!(
-            "UPDATE {TABLE_NAME}
+            "UPDATE {SCHEDULE_TABLE_NAME}
              SET status = 'failed',
                  attempts = attempts + 1,
                  last_error = ?1,
@@ -228,7 +225,7 @@ impl Schedule {
     fn migration_query() -> String {
         format!(
             "
-            CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+            CREATE TABLE IF NOT EXISTS {SCHEDULE_TABLE_NAME} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 body TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending'
