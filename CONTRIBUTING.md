@@ -42,7 +42,6 @@ This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participati
    cd vcpkg
    .\bootstrap-vcpkg.bat
 
-   # Use arm64-windows-static-md on Windows ARM
    $env:VCPKG_ROOT = (Get-Location).Path
    [Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
 
@@ -52,18 +51,20 @@ This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participati
    }
    $env:PATH = "$env:VCPKG_ROOT;$env:PATH"
 
-   $env:VCPKGRS_TRIPLET = "x64-windows-static-md"
-   [Environment]::SetEnvironmentVariable("VCPKGRS_TRIPLET", $env:VCPKGRS_TRIPLET, "User")
-
-   vcpkg install `
-     "sqlite3:$env:VCPKGRS_TRIPLET" `
-     "curl:$env:VCPKGRS_TRIPLET"
+   vcpkg install sqlite3 curl
    cd ..
    ```
 
    Then build as usual:
 
    ```powershell
+   cargo build
+   ```
+
+   If you still hit Windows linker errors after installing dependencies, run:
+
+   ```powershell
+   cargo clean
    cargo build
    ```
 

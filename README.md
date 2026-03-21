@@ -111,7 +111,7 @@ git clone https://github.com/microsoft/vcpkg
 cd vcpkg
 .\bootstrap-vcpkg.bat
 
-# Install native dependencies (use arm64-windows-static-md on Windows ARM)
+# Install native dependencies
 $env:VCPKG_ROOT = (Get-Location).Path
 [Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
 
@@ -121,15 +121,14 @@ if ($oldPath -notlike "*$env:VCPKG_ROOT*") {
 }
 $env:PATH = "$env:VCPKG_ROOT;$env:PATH"
 
-$env:VCPKGRS_TRIPLET = "x64-windows-static-md"
-[Environment]::SetEnvironmentVariable("VCPKGRS_TRIPLET", $env:VCPKGRS_TRIPLET, "User")
-
-vcpkg install `
-  "sqlite3:$env:VCPKGRS_TRIPLET" `
-  "curl:$env:VCPKGRS_TRIPLET"
+vcpkg install sqlite3 curl
 cd ..
 
 # Build
+cargo build --release
+
+# If linker errors persist after installing dependencies
+cargo clean
 cargo build --release
 
 # Install binary to a user PATH location
