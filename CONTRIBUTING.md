@@ -34,6 +34,39 @@ This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participati
    cargo build
    ```
 
+   If you are developing on Windows, install `vcpkg` and native dependencies first:
+
+   ```powershell
+   # If vcpkg is already installed, skip clone/bootstrap and set VCPKG_ROOT accordingly
+   git clone https://github.com/microsoft/vcpkg
+   cd vcpkg
+   .\bootstrap-vcpkg.bat
+
+   # Use arm64-windows-static-md on Windows ARM
+   $env:VCPKG_ROOT = (Get-Location).Path
+   [Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
+
+   $oldPath = [Environment]::GetEnvironmentVariable("Path", "User")
+   if ($oldPath -notlike "*$env:VCPKG_ROOT*") {
+     [Environment]::SetEnvironmentVariable("Path", "$oldPath;$env:VCPKG_ROOT", "User")
+   }
+   $env:PATH = "$env:VCPKG_ROOT;$env:PATH"
+
+   $env:VCPKGRS_TRIPLET = "x64-windows-static-md"
+   [Environment]::SetEnvironmentVariable("VCPKGRS_TRIPLET", $env:VCPKGRS_TRIPLET, "User")
+
+   vcpkg install `
+     "sqlite3:$env:VCPKGRS_TRIPLET" `
+     "curl:$env:VCPKGRS_TRIPLET"
+   cd ..
+   ```
+
+   Then build as usual:
+
+   ```powershell
+   cargo build
+   ```
+
 4. **Create a branch** for your work:
    ```bash
    git checkout -b feature/your-feature-name

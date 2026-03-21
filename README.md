@@ -95,6 +95,58 @@ $env:Path += ";$dest"
 > For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
 > After that installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
 
+## Build from source on Windows
+Use PowerShell:
+
+```powershell
+git clone https://github.com/StanleyMasinde/twitter.git
+cd twitter
+
+# Install Rust if needed
+winget install --id Rustlang.Rustup -e
+
+# Install and bootstrap vcpkg
+# If vcpkg is already installed, skip clone/bootstrap and set VCPKG_ROOT accordingly
+git clone https://github.com/microsoft/vcpkg
+cd vcpkg
+.\bootstrap-vcpkg.bat
+
+# Install native dependencies (use arm64-windows-static-md on Windows ARM)
+$env:VCPKG_ROOT = (Get-Location).Path
+[Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
+
+$oldPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($oldPath -notlike "*$env:VCPKG_ROOT*") {
+  [Environment]::SetEnvironmentVariable("Path", "$oldPath;$env:VCPKG_ROOT", "User")
+}
+$env:PATH = "$env:VCPKG_ROOT;$env:PATH"
+
+$env:VCPKGRS_TRIPLET = "x64-windows-static-md"
+[Environment]::SetEnvironmentVariable("VCPKGRS_TRIPLET", $env:VCPKGRS_TRIPLET, "User")
+
+vcpkg install `
+  "sqlite3:$env:VCPKGRS_TRIPLET" `
+  "curl:$env:VCPKGRS_TRIPLET"
+cd ..
+
+# Build
+cargo build --release
+
+# Install binary to a user PATH location
+$dest = "$env:USERPROFILE\bin"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item -Force ".\target\release\twitter.exe" "$dest\twitter.exe"
+
+# Add that directory to PATH (persistent, per-user)
+$old = [Environment]::GetEnvironmentVariable("Path","User")
+if ($old -notlike "*$dest*") {
+  [Environment]::SetEnvironmentVariable("Path","$old;$dest","User")
+}
+
+# Make it available in this session
+$env:Path += ";$dest"
+```
+
 ## Configuration
 1. Create a Twitter developer account at [developer.twitter.com](https://developer.twitter.com)
 2. Create a new app and get your API credentials
