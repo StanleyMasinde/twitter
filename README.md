@@ -8,7 +8,7 @@
 ## What it does
 I love creating content on Twitter but twitter.com leads to doomscrolling. This is my way of fighting that.
 
-Simple CLI for posting to Twitter using their API v2. No OAuth flow - just configure once and tweet.
+Simple CLI for posting to Twitter using their API v2.
 
 ## Installation
 
@@ -178,6 +178,8 @@ consumer_secret = "your_consumer_secret"
 access_token = "your_access_token"
 access_secret = "your_access_secret"
 bearer_token = "your_bearer_token"
+client_id = "your_oauth2_client_id"
+client_secret = "your_oauth2_client_secret"
 
 # Account 2
 [[accounts]]
@@ -186,7 +188,11 @@ consumer_secret = "your_consumer_secret"
 access_token = "your_access_token"
 access_secret = "your_access_secret"
 bearer_token = "your_bearer_token"
+client_id = "your_oauth2_client_id"
+client_secret = "your_oauth2_client_secret"
 ```
+
+On `main` (not yet released), `client_id` and `client_secret` are required config fields for each account. Keep them populated even if you are not using OAuth 2.0-backed commands yet.
 
 ### Manual Configuration
 Create config file at `~/.config/twitter_cli/config.toml` with the format above. Keep this file private since it contains API secrets.
@@ -517,6 +523,7 @@ User-scoped block commands use the current authenticated user automatically.
 twitter blocks list
 twitter blocks list --max-results 25
 ```
+`twitter blocks list` uses OAuth 2.0 (Authorization Code + PKCE) and reuses cached tokens after first authorization.
 
 #### Unblock a user
 User-scoped block commands use the current authenticated user automatically.
@@ -614,6 +621,20 @@ twitter bookmarks list
 twitter bookmarks create --tweet-id 1234567890
 twitter bookmarks delete --tweet-id 1234567890
 ```
+
+OAuth behavior:
+- `twitter bookmarks list` uses OAuth 2.0 (Authorization Code + PKCE) and stores access/refresh tokens in the local cache database.
+- `twitter blocks list` uses OAuth 2.0 (Authorization Code + PKCE) and shares the same local token cache.
+- `twitter bookmarks create`, `twitter bookmarks delete`, `twitter bookmarks folders`, and `twitter bookmarks folder` currently use OAuth 1.0a user tokens from your config.
+
+First OAuth 2.0 key exchange for `bookmarks list` or `blocks list` (on `main`, unreleased):
+1. Add `client_id` and `client_secret` to your account in `~/.config/twitter_cli/config.toml`.
+2. In the X/Twitter Developer Dashboard (App settings), set the callback/redirect URL to `http://127.0.0.1:3000`.
+3. Run `twitter bookmarks list` or `twitter blocks list`.
+4. Open the printed authorization URL in your browser.
+5. After consent, the browser redirect may show an error (for example, server not found). That is expected because no local dev server is required (works for VPS/embedded environments too).
+6. Copy the full callback URL from the browser address bar, paste it in the CLI prompt, then press Enter.
+7. The CLI exchanges the code for tokens and caches them; later runs auto-refresh with the refresh token.
 
 List bookmark folders and fetch the tweets in a folder.
 ```bash
