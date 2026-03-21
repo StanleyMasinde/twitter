@@ -206,7 +206,6 @@ impl CreateBookmark {
 
     pub fn send(&self) -> Result<Response<CreateBookmarkResponse>, CreateBookmarkError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
         let body = serde_json::to_string(&CreateBookmarkBody {
             tweet_id: self.tweet_id.as_str(),
         })
@@ -214,9 +213,14 @@ impl CreateBookmark {
             message: err.to_string(),
         })?;
 
+        let token_manager = TokenManager::new();
+        let access_token = token_manager.get_token();
+
         let response = curl_rest::Client::default()
             .post()
-            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .header(curl_rest::Header::Authorization(
+                format!("Bearer {}", access_token).into(),
+            ))
             .body_json(body)
             .send(url.as_str())
             .map_err(|err| CreateBookmarkError {

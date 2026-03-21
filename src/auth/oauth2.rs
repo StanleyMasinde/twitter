@@ -70,6 +70,7 @@ impl TokenManager {
             let expiry_time: Timestamp = current_token.expires_at.parse().unwrap();
             let now = Timestamp::now();
             if now > expiry_time {
+                println!("{}", current_token.refresh_token);
                 let token = client
                     .exchange_refresh_token(&RefreshToken::new(current_token.refresh_token))
                     .request(&CurlHttpClient)
@@ -99,6 +100,7 @@ impl TokenManager {
         let (auth_url, csrf_token) = client
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new("bookmark.read".to_string()))
+            .add_scope(Scope::new("bookmark.write".to_string()))
             .add_scope(Scope::new("tweet.read".to_string()))
             .add_scope(Scope::new("users.read".to_string()))
             .add_scope(Scope::new("block.read".to_string()))
