@@ -1,6 +1,6 @@
 use crate::constants::TOKEN_TABLE_NAME;
 use jiff::Timestamp;
-use oauth2::{RefreshToken, TokenResponse};
+use oauth2::{RefreshToken, StandardTokenResponse, TokenResponse};
 use rusqlite::{Connection, params};
 use std::{
     io,
@@ -41,7 +41,7 @@ impl TokenManager {
         Self { connection }
     }
 
-    pub fn get_token(&self) -> String {
+    pub fn get_token(self) -> String {
         let mut cfg = load_config();
         let account_id: u32 = cfg.current_account as u32;
         let current_account = cfg.current_account();
@@ -70,22 +70,13 @@ impl TokenManager {
             let expiry_time: Timestamp = current_token.expires_at.parse().unwrap();
             let now = Timestamp::now();
             if now > expiry_time {
-                println!("{}", current_token.refresh_token);
                 let token = client
                     .exchange_refresh_token(&RefreshToken::new(current_token.refresh_token))
                     .request(&CurlHttpClient)
                     .unwrap();
 
-                let seconds = token.expires_in().map(|t| t.as_secs()).unwrap_or(0);
-                let expiry_seconds_since_epoch = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .add(Duration::from_secs(seconds))
-                    .as_secs() as i64;
+                let token_expiry_time = self.get_token_expiry_time(token.clone());
 
-                let token_expiry_time = Timestamp::from_second(expiry_seconds_since_epoch)
-                    .unwrap()
-                    .to_string();
                 let token_string = token.access_token().secret();
                 let refresh_token_string = token.refresh_token().map(|f| f.secret()).unwrap();
 
@@ -177,16 +168,7 @@ impl TokenManager {
             "
         );
 
-        let seconds = token.expires_in().map(|t| t.as_secs()).unwrap_or(0);
-        let expiry_seconds_since_epoch = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .add(Duration::from_secs(seconds))
-            .as_secs() as i64;
-
-        let token_expiry_time = Timestamp::from_second(expiry_seconds_since_epoch)
-            .unwrap()
-            .to_string();
+        let token_expiry_time = self.get_token_expiry_time(token.clone());
         let db_res = self.connection.execute(
             &insert_query,
             params![
@@ -203,6 +185,22 @@ impl TokenManager {
         }
 
         token.access_token().secret().to_owned()
+    }
+
+    fn get_token_expiry_time(
+        &self,
+        token: StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>,
+    ) -> std::string::String {
+        let seconds = token.expires_in().map(|t| t.as_secs()).unwrap_or(0);
+        let expiry_seconds_since_epoch = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .add(Duration::from_secs(seconds))
+            .as_secs() as i64;
+
+        Timestamp::from_second(expiry_seconds_since_epoch)
+            .unwrap()
+            .to_string()
     }
 }
 
