@@ -76,12 +76,33 @@ impl TokenManager {
                     .request(&CurlHttpClient)
                     .unwrap();
 
-                let token_string = token.access_token().secret();
+                let seconds = token.expires_in().map(|t| t.as_secs()).unwrap_or(0);
+                let expiry_seconds_since_epoch = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .add(Duration::from_secs(seconds))
+                    .as_secs() as i64;
 
-                let update_token_query =
-                    format!("UPDATE {TOKEN_TABLE_NAME} SET access_token = ? WHERE account_id = ?");
+                let token_expiry_time = Timestamp::from_second(expiry_seconds_since_epoch)
+                    .unwrap()
+                    .to_string();
+                let token_string = token.access_token().secret();
+                let refresh_token_string = token.refresh_token().map(|f| f.secret()).unwrap();
+
+                let update_token_query = format!(
+                    "UPDATE {TOKEN_TABLE_NAME} SET access_token = ?, refresh_token = ?, expires_at = ?, updated_at = ? WHERE account_id = ?"
+                );
                 self.connection
-                    .execute(&update_token_query, params![token_string, account_id])
+                    .execute(
+                        &update_token_query,
+                        params![
+                            token_string,
+                            refresh_token_string,
+                            token_expiry_time,
+                            now.to_string(),
+                            account_id
+                        ],
+                    )
                     .unwrap();
 
                 return token_string.to_string();
