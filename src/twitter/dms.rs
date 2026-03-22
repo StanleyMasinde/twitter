@@ -43,7 +43,6 @@ pub struct CreateConversationError {
 pub struct SendWithParticipantMessageData {
     pub dm_conversation_id: String,
     pub dm_event_id: String,
-    pub text: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -529,8 +528,8 @@ impl std::fmt::Display for SendWithParticipantMessageResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Conversation Id: {}\nMessage Id: {}\nText: {}",
-            self.data.dm_conversation_id, self.data.dm_event_id, self.data.text
+            "Conversation Id: {}\nMessage Id: {}",
+            self.data.dm_conversation_id, self.data.dm_event_id
         )
     }
 }
