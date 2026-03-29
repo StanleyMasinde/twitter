@@ -1,2 +1,3 @@
 # Install script is documentation/tooling, not part of the main codebase
 *.sh linguist-documentation
+*.ps1 linguist-documentation
