@@ -12,7 +12,9 @@ Simple CLI for posting to Twitter using their API v2.
 
 ## Installation
 
-### Quick install
+### Unix/Linux
+
+#### Quick install
 Install the latest version with the following command. If you prefer, review the script first.
 
 ```shell
@@ -30,17 +32,17 @@ Review the installer before running:
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh
 ```
 
-### Install a specific version
+#### Install a specific version
 ```shell
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh -s v1.5.0
 ```
 
-### Custom install location
+#### Custom install location
 ```shell
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | TWITTER_INSTALL=~/.local/bin sh
 ```
 
-### Updating
+#### Updating
 ```shell
 sudo twitter update
 ```
@@ -49,13 +51,7 @@ If `twitter` is installed in `/usr/local/bin` (default install location), that d
 
 If you installed to a user-writable location (for example with `TWITTER_INSTALL=~/.local/bin`), `sudo` is not required.
 
-On Windows, run:
-```powershell
-twitter update
-```
-`twitter update` schedules replacement of the current `twitter.exe` after the running process exits. Run an elevated terminal only if the executable is in a protected directory (for example `C:\Program Files`).
-
-### ArchLinux
+#### ArchLinux
 ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
 ```bash
 yay -S twitter-cli
@@ -68,28 +64,33 @@ After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
-### Windows x64 Via PowerShell
+### Windows
+
+#### Via PowerShell
 > Administrator privileges are only needed when writing to a protected directory.
-> Ensure your default shell is PowerShell. If you are not sure, search for PowerShell and run it.
+> Works in both Windows PowerShell 5.1 (`powershell`) and PowerShell 7+ (`pwsh`).
+
+Install latest version:
 ```powershell
-# Download and extract
-Invoke-WebRequest -Uri https://github.com/StanleyMasinde/twitter/releases/latest/download/twitter-windows-x86_64.zip -OutFile twitter.zip
-Expand-Archive -Force twitter.zip -DestinationPath .
-
-# Move exe to a user bin directory
-$dest = "$env:USERPROFILE\bin"
-New-Item -ItemType Directory -Force -Path $dest | Out-Null
-Move-Item -Force ".\twitter.exe" "$dest\twitter.exe"
-
-# Add bin directory to PATH (persistent, per-user)
-$old = [Environment]::GetEnvironmentVariable("Path","User")
-if ($old -notlike "*$dest*") {
-  [Environment]::SetEnvironmentVariable("Path","$old;$dest","User")
-}
-
-# Make it available in this session
-$env:Path += ";$dest"
+& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1")))
 ```
+
+Install a specific version:
+```powershell
+& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1"))) v1.5.0
+```
+
+Custom install location:
+```powershell
+$env:TWITTER_INSTALL = "$env:USERPROFILE\bin"
+& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1")))
+```
+
+#### Updating
+```powershell
+twitter update
+```
+`twitter update` schedules replacement of the current `twitter.exe` after the running process exits. Run an elevated terminal only if the executable is in a protected directory (for example `C:\Program Files`).
 
 >[!NOTE]
 > For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
