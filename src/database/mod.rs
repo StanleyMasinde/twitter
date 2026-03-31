@@ -20,13 +20,17 @@ impl Database {
     pub fn open_connection(&self) -> Connection {
         let data_dir = match dirs::data_dir() {
             Some(path) => path,
-            None => gracefully_exit("Failed to locate a data directory for scheduled tweets."),
+            None => gracefully_exit(&format!(
+                "Failed to locate a data directory for {}.",
+                self.table_name
+            )),
         };
 
         let cli_data_dir = data_dir.join(CACHE_DIR);
         if let Err(err) = std::fs::create_dir_all(&cli_data_dir) {
             gracefully_exit(&format!(
-                "Failed to create schedule data directory '{}': {err}",
+                "Failed to create {} data directory '{}': {err}",
+                self.table_name,
                 cli_data_dir.display()
             ));
         }
