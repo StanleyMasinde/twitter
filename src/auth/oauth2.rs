@@ -1,7 +1,4 @@
-use crate::{
-    constants::TOKEN_TABLE_NAME,
-    database::Database,
-};
+use crate::{constants::TOKEN_TABLE_NAME, database::Database};
 use jiff::Timestamp;
 use oauth2::{RefreshToken, StandardTokenResponse, TokenResponse};
 use rusqlite::{Connection, params};
