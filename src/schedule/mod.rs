@@ -1,5 +1,7 @@
-use crate::constants::{CACHE_DIR, SCHEDULE_TABLE_NAME};
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use crate::{constants::SCHEDULE_TABLE_NAME, database::Database};
+#[cfg(test)]
+use std::path::PathBuf;
+use std::{fmt::Display, str::FromStr};
 
 use jiff::{Timestamp, ToSpan};
 use parse_datetime::parse_datetime;
@@ -8,7 +10,7 @@ use rusqlite::{
     types::{FromSql, FromSqlError, ValueRef},
 };
 
-use crate::{constants::DB_FILENAME, twitter::tweet::TweetBody, utils::gracefully_exit};
+use crate::{twitter::tweet::TweetBody, utils::gracefully_exit};
 
 #[derive(Debug)]
 pub enum ScheduleStatus {
@@ -67,7 +69,8 @@ pub struct Schedule {
 
 impl Default for Schedule {
     fn default() -> Self {
-        let connection = Self::open_connection();
+        let db = Database::new(SCHEDULE_TABLE_NAME);
+        let connection = db.open_connection();
         Self {
             tweet_body: Default::default(),
             send_time: Default::default(),
@@ -101,7 +104,8 @@ impl Schedule {
                 })
                 .timestamp();
         }
-        let connection = Self::open_connection();
+        let db = Database::new(SCHEDULE_TABLE_NAME);
+        let connection = db.open_connection();
 
         Self {
             tweet_body,
@@ -193,60 +197,6 @@ impl Schedule {
         }
     }
 
-    fn open_connection() -> Connection {
-        let data_dir = match schedule_data_dir() {
-            Some(path) => path,
-            None => gracefully_exit("Failed to locate a data directory for scheduled tweets."),
-        };
-
-        let cli_data_dir = data_dir.join(CACHE_DIR);
-        if let Err(err) = std::fs::create_dir_all(&cli_data_dir) {
-            gracefully_exit(&format!(
-                "Failed to create schedule data directory '{}': {err}",
-                cli_data_dir.display()
-            ));
-        }
-
-        let path = cli_data_dir.join(DB_FILENAME);
-        let connection = match Connection::open(path) {
-            Ok(connection) => connection,
-            Err(err) => gracefully_exit(&format!("Failed to open schedule database: {err}")),
-        };
-
-        if let Err(err) = connection.execute(&Self::migration_query(), []) {
-            gracefully_exit(&format!(
-                "Failed to initialize schedule database schema: {err}"
-            ));
-        }
-
-        connection
-    }
-
-    fn migration_query() -> String {
-        format!(
-            "
-            CREATE TABLE IF NOT EXISTS {SCHEDULE_TABLE_NAME} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                body TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending'
-                     CHECK (status IN ('pending', 'sent', 'failed')),
-                scheduled_for DATETIME NOT NULL,
-                attempts INTEGER NOT NULL DEFAULT 0
-                    CHECK (attempts >= 0),
-                last_error TEXT,
-                sent_at DATETIME,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                -- Ensure sent_at is set only when status = 'sent'
-            CHECK (
-             (status = 'sent' AND sent_at IS NOT NULL)
-                OR (status <> 'sent')
-                )
-            );
-            ",
-        )
-    }
-
     fn query_tweets(&self, query: &str) -> Vec<ScheduledTweet> {
         let mut stmt = match self.connection.prepare(query) {
             Ok(stmt) => stmt,
@@ -286,21 +236,6 @@ impl Schedule {
 
         tweets
     }
-}
-
-fn schedule_data_dir() -> Option<PathBuf> {
-    #[cfg(test)]
-    if let Some(path) = test_data_dir_override() {
-        return Some(path);
-    }
-
-    dirs::data_dir()
-}
-
-#[cfg(test)]
-fn test_data_dir_override() -> Option<PathBuf> {
-    let lock = test_data_dir_lock();
-    lock.lock().ok().and_then(|guard| guard.clone())
 }
 
 #[cfg(test)]

@@ -1,4 +1,7 @@
-use crate::constants::TOKEN_TABLE_NAME;
+use crate::{
+    constants::TOKEN_TABLE_NAME,
+    database::Database,
+};
 use jiff::Timestamp;
 use oauth2::{RefreshToken, StandardTokenResponse, TokenResponse};
 use rusqlite::{Connection, params};
@@ -14,10 +17,7 @@ use oauth2::{
     PkceCodeChallenge, RedirectUrl, Scope, TokenUrl, basic::BasicClient, url::Url,
 };
 
-use crate::{
-    constants::{CACHE_DIR, DB_FILENAME},
-    utils::{gracefully_exit, load_config},
-};
+use crate::utils::load_config;
 
 pub struct TokenManager {
     connection: Connection,
@@ -37,7 +37,8 @@ impl Default for TokenManager {
 
 impl TokenManager {
     pub fn new() -> Self {
-        let connection = open_connection();
+        let db = Database::new(TOKEN_TABLE_NAME);
+        let connection = db.open_connection();
         Self { connection }
     }
 
@@ -202,52 +203,4 @@ impl TokenManager {
             .unwrap()
             .to_string()
     }
-}
-
-fn open_connection() -> Connection {
-    let data_dir = match dirs::data_dir() {
-        Some(path) => path,
-        None => gracefully_exit("Failed to locate a data directory for scheduled tweets."),
-    };
-
-    let cli_data_dir = data_dir.join(CACHE_DIR);
-    if let Err(err) = std::fs::create_dir_all(&cli_data_dir) {
-        gracefully_exit(&format!(
-            "Failed to create schedule data directory '{}': {err}",
-            cli_data_dir.display()
-        ));
-    }
-
-    let path = cli_data_dir.join(DB_FILENAME);
-    let connection = match Connection::open(path) {
-        Ok(connection) => connection,
-        Err(err) => gracefully_exit(&format!("Failed to open schedule database: {err}")),
-    };
-
-    if let Err(err) = connection.execute(
-        &format!(
-            "
-                CREATE TABLE IF NOT EXISTS {TOKEN_TABLE_NAME} (
-                id INTEGER PRIMARY KEY,
-                account_id INTEGER UNIQUE,
-
-                access_token TEXT NOT NULL,
-                refresh_token TEXT,
-                token_type TEXT NOT NULL DEFAULT 'Bearer',
-
-                expires_at DATETIME,
-
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-            ",
-        ),
-        [],
-    ) {
-        gracefully_exit(&format!(
-            "Failed to initialize schedule database schema: {err}"
-        ));
-    }
-
-    connection
 }
