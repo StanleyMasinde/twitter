@@ -4,7 +4,6 @@ version = "1.8.0"
 edition = "2024"
 
 [dependencies]
-log = "0.4.29"
 curl-rest = "0.5.1"
 curl = "0.4.49"
 serde =  { version = "1.0.228", features = ['derive']}

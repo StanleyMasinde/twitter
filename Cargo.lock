@@ -1952,7 +1952,6 @@ dependencies = [
  "indicatif",
  "infer",
  "jiff",
- "log",
  "oauth1-request",
  "oauth2",
  "parse_datetime",
