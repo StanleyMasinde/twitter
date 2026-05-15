@@ -20,8 +20,7 @@ detect_platform() {
     arch=$(uname -m)
     case "$arch" in
         x86_64|amd64) arch="x86_64" ;;
-        aarch64|arm64) arch="aarch64" ;;
-        armv7l|armv6l) arch="arm" ;;
+        aarch64|arm64) arch="arm" ;;
         *) echo "Error: Unsupported architecture: $arch" >&2; exit 1 ;;
     esac
     
