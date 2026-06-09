@@ -4,30 +4,30 @@ version = "1.8.0"
 edition = "2024"
 
 [dependencies]
-curl-rest = "0.5.1"
+curl-rest = "0.5.2"
 curl = "0.4.49"
 serde =  { version = "1.0.228", features = ['derive']}
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 oauth = { version = "0.6", package = "oauth1-request" }
 dirs = "6.0.0"
-toml = "1.1.0"
-clap = { version = "4.6.0", features = ["derive"] }
+toml = "1.1.2"
+clap = { version = "4.6.1", features = ["derive"] }
 infer = "0.19.0"
 indicatif = "0.18.4"
 sha2 = "0.11.0"
 hex = "0.4.3"
-tar = "0.4.45"
+tar = "0.4.46"
 flate2 = "1.1.9"
-zip = { version = "8.4.0", default-features = false, features = ["deflate"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 parse_datetime = "0.14.0"
-jiff = "0.2.23"
-rusqlite = "0.39.0"
-tabled = "0.20.0"
+jiff = "0.2.28"
+rusqlite = "0.40.1"
+tabled = "0.21.0"
 oauth2 = { version = "5.0.0", default-features = false, features = ['curl'] }
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
-serial_test = "3.4.0"
+serial_test = "3.5.0"
 
 [[bench]]
 name = "split_tweet"
