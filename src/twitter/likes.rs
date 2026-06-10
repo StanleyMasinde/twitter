@@ -1,7 +1,12 @@
-use std::fmt::Display;
-
 use crate::{
-    twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
+    twitter::{
+        EXPANSIONS, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS,
+        params::{
+            Pagination, apply_query_params, collect_oauth_entries, max_results_entry,
+            oauth_param_list, paginated_oauth_entries, print_next_page_hint, tweet_field_entries,
+            user_field_entries,
+        },
+    },
     utils::{get_current_user_id, oauth_get_header, oauth_post_header},
 };
 use serde::{Deserialize, Serialize};
@@ -10,7 +15,6 @@ use serde::{Deserialize, Serialize};
 pub struct LikesMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -64,7 +68,6 @@ pub struct DeleteLikeError {
 pub struct LikingUsersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -94,12 +97,14 @@ pub struct LikingUsersError {
 pub struct Likes {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
 pub struct LikingUsers {
     tweet_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
@@ -124,11 +129,17 @@ impl Likes {
         Self {
             user_id: user_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(5, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -138,25 +149,24 @@ impl Likes {
 
     pub fn fetch(&self) -> Result<Response<LikesResponse>, LikesError> {
         let url = self.url();
-        let max_results = self.max_results;
-        let tweet_fields = TWEET_FIELDS.to_string();
-        let user_fields = USER_FIELDS.to_string();
-        let expansions = AUTHOR_EXPANSION.to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("tweet.fields", &tweet_fields as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-            ("expansions", &expansions as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
-        let max_results_query = max_results.to_string();
+        let oauth_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &tweet_field_entries(),
+        );
+        let oauth_entries = collect_oauth_entries(oauth_entries, &self.pagination.oauth_entries());
+        let auth_header = oauth_get_header(url.as_str(), &oauth_param_list(oauth_entries));
 
-        let response = curl_rest::Client::default()
+        let max_results_query = self.max_results.to_string();
+        let pagination_entries = self.pagination.oauth_entries();
+        let mut request = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results_query.as_str())
-            .query_param_kv("tweet.fields", tweet_fields.as_str())
-            .query_param_kv("user.fields", user_fields.as_str())
-            .query_param_kv("expansions", expansions.as_str())
+            .query_param_kv("tweet.fields", TWEET_FIELDS)
+            .query_param_kv("user.fields", USER_FIELDS)
+            .query_param_kv("expansions", EXPANSIONS);
+        request = apply_query_params(request, &pagination_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| LikesError {
@@ -184,11 +194,17 @@ impl LikingUsers {
         Self {
             tweet_id: tweet_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -198,13 +214,19 @@ impl LikingUsers {
 
     pub fn fetch(&self) -> Result<Response<LikingUsersResponse>, LikingUsersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let oauth_entries =
+            paginated_oauth_entries(self.max_results, &user_field_entries(), &self.pagination);
+        let auth_header = oauth_get_header(url.as_str(), &oauth_param_list(oauth_entries));
 
-        let response = curl_rest::Client::default()
+        let max_results_query = self.max_results.to_string();
+        let pagination_entries = self.pagination.oauth_entries();
+        let mut request = curl_rest::Client::default()
             .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", "name,username")
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("user.fields", USER_FIELDS);
+        request = apply_query_params(request, &pagination_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| LikingUsersError {
@@ -319,6 +341,56 @@ impl DeleteLike {
     }
 }
 
+pub fn print_likes(response: &LikesResponse) {
+    if response.data.is_empty() {
+        println!("No liked tweets found.");
+        return;
+    }
+
+    for tweet in &response.data {
+        println!(
+            "{}\n",
+            crate::twitter::TweetCreateResponse {
+                data: tweet.clone(),
+                includes: response.includes.clone(),
+            }
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
+pub fn print_liking_users(response: &LikingUsersResponse) {
+    if response.data.is_empty() {
+        println!("No liking users found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
 impl std::fmt::Display for LikingUsersResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -367,6 +439,7 @@ mod tests {
         let endpoint = LikingUsers {
             tweet_id: "456".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(

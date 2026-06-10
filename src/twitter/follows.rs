@@ -1,5 +1,11 @@
 use crate::{
-    twitter::{Response, UserData},
+    twitter::{
+        Response, USER_FIELDS, UserData,
+        params::{
+            Pagination, apply_query_params, oauth_param_list, paginated_oauth_entries,
+            print_next_page_hint, user_field_entries,
+        },
+    },
     utils::{get_current_user_id, oauth_get_header, oauth_post_header},
 };
 use serde::Deserialize;
@@ -10,7 +16,6 @@ use std::fmt::Display;
 pub struct FollowingMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -33,7 +38,6 @@ pub struct FollowingError {
 pub struct FollowersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -56,12 +60,14 @@ pub struct FollowersError {
 pub struct Following {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
 pub struct Followers {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug, Deserialize)]
@@ -136,11 +142,17 @@ impl Following {
         Self {
             user_id: user_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -150,18 +162,19 @@ impl Following {
 
     pub fn fetch(&self) -> Result<Response<FollowingResponse>, FollowingError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
-        let user_fields = "name,username".to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let oauth_entries =
+            paginated_oauth_entries(self.max_results, &user_field_entries(), &self.pagination);
+        let auth_header = oauth_get_header(url.as_str(), &oauth_param_list(oauth_entries));
 
-        let response = curl_rest::Client::default()
+        let max_results_query = self.max_results.to_string();
+        let pagination_entries = self.pagination.oauth_entries();
+        let mut request = curl_rest::Client::default()
             .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("user.fields", USER_FIELDS);
+        request = apply_query_params(request, &pagination_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| FollowingError {
@@ -209,11 +222,17 @@ impl Followers {
         Self {
             user_id: user_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -223,18 +242,19 @@ impl Followers {
 
     pub fn fetch(&self) -> Result<Response<FollowersResponse>, FollowersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
-        let user_fields = "name,username".to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let oauth_entries =
+            paginated_oauth_entries(self.max_results, &user_field_entries(), &self.pagination);
+        let auth_header = oauth_get_header(url.as_str(), &oauth_param_list(oauth_entries));
 
-        let response = curl_rest::Client::default()
+        let max_results_query = self.max_results.to_string();
+        let pagination_entries = self.pagination.oauth_entries();
+        let mut request = curl_rest::Client::default()
             .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", user_fields.as_str())
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("user.fields", USER_FIELDS);
+        request = apply_query_params(request, &pagination_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| FollowersError {
@@ -351,6 +371,58 @@ impl DeleteFollow {
             })
         }
     }
+}
+
+pub fn print_following(response: &FollowingResponse) {
+    if response.data.is_empty() {
+        println!("No following users found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
+pub fn print_followers(response: &FollowersResponse) {
+    if response.data.is_empty() {
+        println!("No followers found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
 }
 
 #[cfg(test)]

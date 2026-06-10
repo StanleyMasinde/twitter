@@ -2,8 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::oauth2::TokenManager,
-    twitter::Response,
-    utils::{get_current_user_id, oauth_post_header},
+    twitter::{
+        Response,
+        params::{
+            Pagination, apply_query_params, collect_oauth_entries, max_results_entry,
+            print_next_page_hint, user_field_entries,
+        },
+    },
+    utils::get_current_user_id,
 };
 
 #[derive(Debug, Deserialize)]
@@ -40,7 +46,6 @@ pub struct DeleteBlockError {
 pub struct BlockedUsersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -82,6 +87,7 @@ pub struct DeleteBlock {
 pub struct BlockedUsers {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Serialize)]
@@ -95,11 +101,17 @@ impl BlockedUsers {
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -109,14 +121,17 @@ impl BlockedUsers {
 
     pub fn fetch(&self) -> Result<Response<BlockedUsersResponse>, BlockedUsersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
-        let user_fields = "name,username";
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &user_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
         let access_token = TokenManager::default().get_token();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", user_fields)
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(
                 format!("Bearer {}", access_token).into(),
             ))
@@ -157,7 +172,7 @@ impl CreateBlock {
 
     pub fn send(&self) -> Result<Response<CreateBlockResponse>, CreateBlockError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let access_token = TokenManager::default().get_token();
         let body = serde_json::to_string(&CreateBlockBody {
             target_user_id: self.target_user_id.as_str(),
         })
@@ -167,7 +182,9 @@ impl CreateBlock {
 
         let response = curl_rest::Client::default()
             .post()
-            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .header(curl_rest::Header::Authorization(
+                format!("Bearer {}", access_token).into(),
+            ))
             .body_json(body)
             .send(url.as_str())
             .map_err(|err| CreateBlockError {
@@ -210,11 +227,13 @@ impl DeleteBlock {
 
     pub fn send(&self) -> Result<Response<DeleteBlockResponse>, DeleteBlockError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let access_token = TokenManager::default().get_token();
 
         let response = curl_rest::Client::default()
             .delete()
-            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .header(curl_rest::Header::Authorization(
+                format!("Bearer {}", access_token).into(),
+            ))
             .send(url.as_str())
             .map_err(|err| DeleteBlockError {
                 message: err.to_string(),
@@ -235,6 +254,32 @@ impl DeleteBlock {
             })
         }
     }
+}
+
+pub fn print_blocked_users(response: &BlockedUsersResponse) {
+    if response.data.is_empty() {
+        println!("No blocked users found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
 }
 
 impl std::fmt::Display for BlockedUsersResponse {
@@ -266,6 +311,7 @@ mod tests {
         let endpoint = BlockedUsers {
             user_id: "42".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/42/blocking");

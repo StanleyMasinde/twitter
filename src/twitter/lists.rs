@@ -3,13 +3,27 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
+    twitter::{
+        Includes, Response, TweetData,
+        params::{
+            Pagination, apply_query_params, collect_oauth_entries, max_results_entry,
+            print_next_page_hint, tweet_field_entries,
+        },
+    },
     utils::{bearer_auth_header, get_current_user_id, oauth_post_header, oauth_put_header},
 };
 
 const LIST_FIELDS: &str = "id,name,owner_id,private,description,follower_count,member_count";
 const LIST_EXPANSIONS: &str = "owner_id";
 const OWNER_USER_FIELDS: &str = "name,username";
+
+fn list_field_entries() -> Vec<(&'static str, String)> {
+    vec![
+        ("list.fields", LIST_FIELDS.to_string()),
+        ("expansions", LIST_EXPANSIONS.to_string()),
+        ("user.fields", OWNER_USER_FIELDS.to_string()),
+    ]
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ListUser {
@@ -44,7 +58,6 @@ pub struct ListData {
 pub struct ListMembershipsMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -91,7 +104,6 @@ pub struct CreateListError {
 pub struct OwnedListsMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -116,7 +128,6 @@ pub struct OwnedListsError {
 pub struct ListTweetsMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -141,7 +152,6 @@ pub struct ListTweetsError {
 pub struct ListMembersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -164,12 +174,14 @@ pub struct ListMembersError {
 pub struct ListMemberships {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
 pub struct OwnedLists {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
@@ -188,12 +200,14 @@ pub struct CreateList {
 pub struct ListMembers {
     list_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
 pub struct ListTweets {
     list_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug, Deserialize)]
@@ -309,11 +323,17 @@ impl ListMemberships {
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -326,15 +346,17 @@ impl ListMemberships {
 
     pub fn fetch(&self) -> Result<Response<ListMembershipsResponse>, ListMembershipsError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &list_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
         let authorization = bearer_auth_header();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("list.fields", LIST_FIELDS)
-            .query_param_kv("expansions", LIST_EXPANSIONS)
-            .query_param_kv("user.fields", OWNER_USER_FIELDS)
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url.as_str())
             .map_err(|err| ListMembershipsError {
@@ -364,11 +386,17 @@ impl OwnedLists {
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -378,15 +406,17 @@ impl OwnedLists {
 
     pub fn fetch(&self) -> Result<Response<OwnedListsResponse>, OwnedListsError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &list_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
         let authorization = bearer_auth_header();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("list.fields", LIST_FIELDS)
-            .query_param_kv("expansions", LIST_EXPANSIONS)
-            .query_param_kv("user.fields", OWNER_USER_FIELDS)
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url.as_str())
             .map_err(|err| OwnedListsError {
@@ -567,11 +597,17 @@ impl ListMembers {
         Self {
             list_id: list_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -581,13 +617,19 @@ impl ListMembers {
 
     pub fn fetch(&self) -> Result<Response<ListMembersResponse>, ListMembersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![
+                max_results_entry(self.max_results),
+                ("user.fields", OWNER_USER_FIELDS.to_string()),
+            ],
+            &self.pagination.oauth_entries(),
+        );
         let authorization = bearer_auth_header();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", OWNER_USER_FIELDS)
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url.as_str())
             .map_err(|err| ListMembersError {
@@ -616,11 +658,17 @@ impl ListTweets {
         Self {
             list_id: list_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -630,15 +678,17 @@ impl ListTweets {
 
     pub fn fetch(&self) -> Result<Response<ListTweetsResponse>, ListTweetsError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &tweet_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
         let authorization = bearer_auth_header();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("tweet.fields", TWEET_FIELDS)
-            .query_param_kv("user.fields", USER_FIELDS)
-            .query_param_kv("expansions", AUTHOR_EXPANSION)
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url.as_str())
             .map_err(|err| ListTweetsError {
@@ -906,6 +956,30 @@ impl Display for ListLookupResponse {
     }
 }
 
+pub fn print_list_tweets(response: &ListTweetsResponse) {
+    if response.data.is_empty() {
+        println!("No list tweets found.");
+        return;
+    }
+
+    for tweet in &response.data {
+        println!(
+            "{}\n",
+            crate::twitter::TweetCreateResponse {
+                data: tweet.clone(),
+                includes: response.includes.clone(),
+            }
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
 impl Display for ListMembersResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -985,6 +1059,7 @@ mod tests {
         let endpoint = OwnedLists {
             user_id: "123".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/owned_lists");
@@ -1065,6 +1140,7 @@ mod tests {
         let endpoint = ListTweets {
             list_id: "123".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/lists/123/tweets");

@@ -2,8 +2,10 @@ use std::fmt::Error;
 use std::str::FromStr;
 
 use crate::twitter::{Response, TweetCreateResponse, TweetData};
-use crate::utils::oauth_post_header;
+use crate::utils::{oauth_post_header, oauth_put_header};
 use serde::{Deserialize, Serialize};
+
+const TWEETS_URL: &str = "https://api.x.com/2/tweets";
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTweetErr {
@@ -25,7 +27,7 @@ pub struct DeleteTweetErr {
     pub message: String,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct TweetBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
@@ -33,6 +35,8 @@ pub struct TweetBody {
     pub reply: Option<Reply>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub media: Option<Media>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quote_tweet_id: Option<QuoteTweet>,
 }
 
 impl FromStr for TweetBody {
@@ -43,13 +47,19 @@ impl FromStr for TweetBody {
             text: Some(s.to_owned()),
             reply: None,
             media: None,
+            quote_tweet_id: None,
         })
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Reply {
     pub in_reply_to_tweet_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct QuoteTweet {
+    pub quote_tweet_id: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -74,6 +84,17 @@ pub struct DeleteTweet {
     tweet_id: String,
 }
 
+#[derive(Debug)]
+pub struct EditTweet {
+    tweet_id: String,
+    text: String,
+}
+
+#[derive(Serialize)]
+struct EditTweetBody<'a> {
+    text: &'a str,
+}
+
 impl<'t> FromStr for Tweet<'t> {
     type Err = CreateTweetErr;
 
@@ -85,6 +106,7 @@ impl<'t> FromStr for Tweet<'t> {
                 text: Some(s.to_string()),
                 reply: None,
                 media: None,
+                quote_tweet_id: None,
             },
             tweet_parts: vec![],
         })
@@ -115,10 +137,10 @@ impl<'t> Tweet<'t> {
     }
 
     fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
-        let url = "https://api.twitter.com/2/tweets";
+        let url = TWEETS_URL;
         let auth_header = oauth_post_header(url, &());
         let media = self.payload.media.clone();
-        let mut reply = None;
+        let mut reply = self.payload.reply.clone();
         if self.previous_tweet.is_some() {
             reply = Some(Reply {
                 in_reply_to_tweet_id: self.previous_tweet.clone().unwrap(),
@@ -135,10 +157,17 @@ impl<'t> Tweet<'t> {
                 .to_string();
         }
 
+        let quote_tweet_id = if index.is_some_and(|current| current > 0) {
+            None
+        } else {
+            self.payload.quote_tweet_id.clone()
+        };
+
         let new_tweet = TweetBody {
             text: Some(tweet_text),
             reply,
             media,
+            quote_tweet_id,
         };
 
         let body = serde_json::to_string(&new_tweet).map_err(|e| CreateTweetErr {
@@ -175,7 +204,7 @@ impl DeleteTweet {
     }
 
     fn url(&self) -> String {
-        format!("https://api.x.com/2/tweets/{}", self.tweet_id)
+        format!("{TWEETS_URL}/{}", self.tweet_id)
     }
 
     pub fn send(&self) -> Result<Response<DeleteTweetResponse>, DeleteTweetErr> {
@@ -206,6 +235,53 @@ impl DeleteTweet {
     }
 }
 
+impl EditTweet {
+    pub fn new(tweet_id: impl Into<String>, text: impl Into<String>) -> Self {
+        Self {
+            tweet_id: tweet_id.into(),
+            text: text.into(),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!("{TWEETS_URL}/{}", self.tweet_id)
+    }
+
+    pub fn send(&self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
+        let url = self.url();
+        let auth_header = oauth_put_header(url.as_str(), &());
+        let body = serde_json::to_string(&EditTweetBody {
+            text: self.text.as_str(),
+        })
+        .map_err(|err| CreateTweetErr {
+            message: err.to_string(),
+        })?;
+
+        let response = curl_rest::Client::default()
+            .put()
+            .header(curl_rest::Header::Authorization(auth_header.into()))
+            .body_json(body)
+            .send(url.as_str())
+            .map_err(|err| CreateTweetErr {
+                message: err.to_string(),
+            })?;
+
+        if (200..300).contains(&response.status.as_u16()) {
+            let res_data: TweetCreateResponse =
+                serde_json::from_slice(&response.body).map_err(|_| CreateTweetErr {
+                    message: "Invalid response body.".into(),
+                })?;
+            Ok(Response {
+                status: response.status.as_u16(),
+                content: res_data,
+            })
+        } else {
+            let err_data = String::from_utf8_lossy(&response.body).to_string();
+            Err(CreateTweetErr { message: err_data })
+        }
+    }
+}
+
 impl<'t> TwitterApi for Tweet<'t> {
     fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
         let text = self.payload.text.clone().unwrap_or_default();
@@ -230,7 +306,6 @@ impl<'t> TwitterApi for Tweet<'t> {
             self.tweet_parts = parts.clone();
             let num_of_tweets = parts.len();
             for index in 0..num_of_tweets {
-                // Only attach media to the first tweet
                 if index > 0 {
                     self.payload.media = None
                 }
@@ -290,6 +365,13 @@ mod tests {
     #[test]
     fn test_delete_tweet_url_uses_tweet_id() {
         let endpoint = DeleteTweet::new("123");
+
+        assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/123");
+    }
+
+    #[test]
+    fn test_edit_tweet_url_uses_tweet_id() {
+        let endpoint = EditTweet::new("123", "updated");
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/tweets/123");
     }

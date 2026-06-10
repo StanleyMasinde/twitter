@@ -1,7 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    twitter::Response,
+    twitter::{
+        Response,
+        params::{
+            Pagination, apply_query_params, collect_oauth_entries, max_results_entry,
+            print_next_page_hint, user_field_entries,
+        },
+    },
     utils::{bearer_auth_header, get_current_user_id, oauth_post_header},
 };
 
@@ -39,7 +45,6 @@ pub struct DeleteRetweetError {
 pub struct RetweetedByMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -75,6 +80,7 @@ pub struct CreateRetweet {
 pub struct RetweetedBy {
     tweet_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
@@ -142,11 +148,17 @@ impl RetweetedBy {
         Self {
             tweet_id: tweet_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         }
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -156,13 +168,17 @@ impl RetweetedBy {
 
     pub fn fetch(&self) -> Result<Response<RetweetedByResponse>, RetweetedByError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &user_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
         let authorization = bearer_auth_header();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", "name,username")
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(authorization.into()))
             .send(url.as_str())
             .map_err(|err| RetweetedByError {
@@ -231,6 +247,32 @@ impl DeleteRetweet {
     }
 }
 
+pub fn print_retweeted_by(response: &RetweetedByResponse) {
+    if response.data.is_empty() {
+        println!("No retweeting users found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
 impl std::fmt::Display for RetweetedByResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -279,6 +321,7 @@ mod tests {
         let endpoint = RetweetedBy {
             tweet_id: "456".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(

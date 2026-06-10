@@ -11,6 +11,7 @@ pub(crate) mod lists;
 pub mod media;
 pub(crate) mod mentions;
 pub(crate) mod mutes;
+pub mod params;
 pub(crate) mod retweets;
 pub(crate) mod streams;
 pub(crate) mod timeline;
@@ -18,9 +19,11 @@ pub mod tweet;
 pub(crate) mod tweets;
 pub mod user;
 
-const TWEET_FIELDS: &str = "author_id,created_at";
-const USER_FIELDS: &str = "name,username";
-const AUTHOR_EXPANSION: &str = "author_id";
+pub const TWEET_FIELDS: &str =
+    "author_id,created_at,public_metrics,entities,attachments,referenced_tweets";
+pub const USER_FIELDS: &str = "name,username,profile_image_url,verified";
+pub const EXPANSIONS: &str = "author_id,attachments.media_keys,referenced_tweets.id";
+pub const AUTHOR_EXPANSION: &str = "author_id";
 
 pub struct Response<T> {
     #[allow(dead_code)]

@@ -1,11 +1,15 @@
-use std::fmt::Display;
-
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::auth::oauth2::TokenManager;
 use crate::{
-    twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
+    twitter::{
+        Includes, Response, TweetData,
+        params::{
+            Pagination, apply_query_params, collect_oauth_entries, max_results_entry,
+            print_next_page_hint, tweet_field_entries,
+        },
+    },
     utils::get_current_user_id,
 };
 
@@ -13,7 +17,6 @@ use crate::{
 pub struct BookmarksMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -38,6 +41,7 @@ pub struct BookmarksError {
 pub struct Bookmarks {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,7 +98,6 @@ pub struct BookmarkFolder {
 pub struct BookmarkFoldersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -117,6 +120,7 @@ pub struct BookmarkFoldersError {
 pub struct BookmarkFolders {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Debug)]
@@ -124,6 +128,7 @@ pub struct BookmarkFolderTweets {
     user_id: String,
     folder_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Serialize)]
@@ -137,11 +142,17 @@ impl Bookmarks {
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -151,21 +162,19 @@ impl Bookmarks {
 
     pub fn fetch(&self) -> Result<Response<BookmarksResponse>, BookmarksError> {
         let url = self.url();
-        let max_results = self.max_results;
-        let max_results_query = max_results.to_string();
-        let tweet_fields = TWEET_FIELDS.to_string();
-        let user_fields = USER_FIELDS.to_string();
-        let expansions = AUTHOR_EXPANSION.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &tweet_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
 
         let token_manager = TokenManager::new();
         let access_token = token_manager.get_token();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results_query.as_str())
-            .query_param_kv("tweet.fields", tweet_fields.as_str())
-            .query_param_kv("user.fields", user_fields.as_str())
-            .query_param_kv("expansions", expansions.as_str())
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(
                 format!("Bearer {}", access_token).into(),
             ))
@@ -292,35 +301,23 @@ impl DeleteBookmark {
     }
 }
 
-impl Display for BookmarkFoldersResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (index, folder) in self.data.iter().enumerate() {
-            if index > 0 {
-                writeln!(f)?;
-                writeln!(f)?;
-            }
-
-            write!(f, "Folder Id: {}\nName: {}", folder.id, folder.name)?;
-            if let Some(tweet_count) = folder.tweet_count {
-                write!(f, "\nTweet count: {}", tweet_count)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 impl BookmarkFolders {
     pub fn current_user() -> Result<Self, BookmarkFoldersError> {
         let user_id = get_current_user_id().map_err(|message| BookmarkFoldersError { message })?;
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -333,13 +330,18 @@ impl BookmarkFolders {
 
     pub fn fetch(&self) -> Result<Response<BookmarkFoldersResponse>, BookmarkFoldersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &self.pagination.oauth_entries(),
+        );
+
         let token_manager = TokenManager::new();
         let access_token = token_manager.get_token();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results.as_str())
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(
                 format!("Bearer {}", access_token).into(),
             ))
@@ -372,11 +374,17 @@ impl BookmarkFolderTweets {
             user_id,
             folder_id: folder_id.into(),
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -389,20 +397,19 @@ impl BookmarkFolderTweets {
 
     pub fn fetch(&self) -> Result<Response<BookmarksResponse>, BookmarksError> {
         let url = self.url();
-        let max_results = self.max_results;
-        let max_results_query = max_results.to_string();
-        let tweet_fields = TWEET_FIELDS.to_string();
-        let user_fields = USER_FIELDS.to_string();
-        let expansions = AUTHOR_EXPANSION.to_string();
+        let query_entries = collect_oauth_entries(
+            vec![max_results_entry(self.max_results)],
+            &tweet_field_entries(),
+        );
+        let query_entries = collect_oauth_entries(query_entries, &self.pagination.oauth_entries());
+
         let token_manager = TokenManager::new();
         let access_token = token_manager.get_token();
 
-        let response = curl_rest::Client::default()
-            .get()
-            .query_param_kv("max_results", max_results_query.as_str())
-            .query_param_kv("tweet.fields", tweet_fields.as_str())
-            .query_param_kv("user.fields", user_fields.as_str())
-            .query_param_kv("expansions", expansions.as_str())
+        let mut request = curl_rest::Client::default().get();
+        request = apply_query_params(request, &query_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(
                 format!("Bearer {}", access_token).into(),
             ))
@@ -428,6 +435,79 @@ impl BookmarkFolderTweets {
     }
 }
 
+pub fn print_bookmarks(response: &BookmarksResponse) {
+    if response.data.is_empty() {
+        println!("No bookmarks found.");
+        return;
+    }
+
+    for tweet in &response.data {
+        println!(
+            "{}\n",
+            crate::twitter::TweetCreateResponse {
+                data: tweet.clone(),
+                includes: response.includes.clone(),
+            }
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
+pub fn print_bookmark_folders(response: &BookmarkFoldersResponse) {
+    if response.data.is_empty() {
+        println!("No bookmark folders found.");
+        return;
+    }
+
+    for (index, folder) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        print!("Folder Id: {}\nName: {}", folder.id, folder.name);
+        if let Some(tweet_count) = folder.tweet_count {
+            print!("\nTweet count: {}", tweet_count);
+        }
+        println!();
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
+pub fn print_folder_tweets(response: &BookmarksResponse) {
+    print_bookmarks(response);
+}
+
+impl std::fmt::Display for BookmarkFoldersResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, folder) in self.data.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+
+            write!(f, "Folder Id: {}\nName: {}", folder.id, folder.name)?;
+            if let Some(tweet_count) = folder.tweet_count {
+                write!(f, "\nTweet count: {}", tweet_count)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -437,6 +517,7 @@ mod tests {
         let endpoint = Bookmarks {
             user_id: "123".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/123/bookmarks");
@@ -470,6 +551,7 @@ mod tests {
         let endpoint = BookmarkFolders {
             user_id: "123".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(
@@ -484,6 +566,7 @@ mod tests {
             user_id: "123".to_string(),
             folder_id: "456".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(

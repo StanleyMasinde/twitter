@@ -15,11 +15,42 @@ use crate::{schedule, utils::send_due_tweets};
 use crate::{
     twitter::{
         self,
-        tweet::{self, Media, TweetBody, TwitterApi},
+        tweet::{self, Media, QuoteTweet, Reply, TweetBody, TwitterApi},
     },
     usage,
     utils::{self, gracefully_exit},
 };
+
+#[derive(Debug, clap::Args)]
+struct PaginationArgs {
+    /// Token for the next page of results
+    #[arg(long)]
+    pagination_token: Option<String>,
+}
+
+fn paginate<T, F>(builder: T, token: Option<String>, apply: F) -> T
+where
+    F: FnOnce(T, String) -> T,
+{
+    match token {
+        Some(token) => apply(builder, token),
+        None => builder,
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct SearchTimeArgs {
+    /// ISO 8601 start time (e.g. 2026-01-01T00:00:00Z)
+    #[arg(long)]
+    start_time: Option<String>,
+
+    /// ISO 8601 end time (e.g. 2026-01-02T00:00:00Z)
+    #[arg(long)]
+    end_time: Option<String>,
+
+    #[command(flatten)]
+    pagination: PaginationArgs,
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None, author)]
@@ -39,6 +70,14 @@ enum Commands {
         /// An image to attach to the tweet
         #[arg(long, short, name = "image")]
         image: Option<PathBuf>,
+
+        /// Reply to a tweet id
+        #[arg(long)]
+        reply_to: Option<String>,
+
+        /// Quote a tweet id
+        #[arg(long)]
+        quote_tweet_id: Option<String>,
 
         /// Launch the editor
         #[arg(long, short, name = "editor")]
@@ -130,7 +169,14 @@ enum Commands {
     },
 
     /// Mentions
-    Mentions {},
+    Mentions {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
+    },
 
     /// Filtered stream
     Streams {
@@ -181,6 +227,9 @@ enum LikesEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Like a tweet for the current authenticated user
@@ -198,7 +247,14 @@ enum LikesEnum {
     },
 
     /// Fetch tweets liked by the current authenticated user
-    Tweets {},
+    Tweets {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -208,6 +264,9 @@ enum BookmarksEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Bookmark a tweet for the current authenticated user
@@ -229,6 +288,9 @@ enum BookmarksEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Fetch tweets from a bookmark folder for the current authenticated user
@@ -240,6 +302,9 @@ enum BookmarksEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 }
 
@@ -272,6 +337,9 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Update a list
@@ -308,6 +376,9 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Fetch the tweets in a list
@@ -319,6 +390,9 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Add a user to a list
@@ -347,6 +421,9 @@ enum ListsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 }
 
@@ -361,6 +438,9 @@ enum DmsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Show DM events for the current authenticated user
@@ -368,6 +448,9 @@ enum DmsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Show DM events with a participant
@@ -379,6 +462,9 @@ enum DmsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Create a DM conversation and send the initial message
@@ -426,6 +512,9 @@ enum RetweetsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Create a retweet for the current authenticated user
@@ -456,6 +545,9 @@ enum MutesEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Unmute a user for the current authenticated user
@@ -480,6 +572,9 @@ enum BlocksEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Unblock a user for the current authenticated user
@@ -494,7 +589,14 @@ enum BlocksEnum {
 enum TimelineEnum {
     /// Fetch the reverse-chronological home timeline
     #[command(visible_alias = "reverse")]
-    ReverseChronological {},
+    ReverseChronological {
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -518,11 +620,34 @@ enum TweetsEnum {
         id: String,
     },
 
+    /// Edit a tweet by id
+    Edit {
+        /// The id of the tweet to edit
+        id: String,
+
+        /// The updated tweet text
+        #[arg(long)]
+        body: String,
+    },
+
     /// Fetch tweets from a user by id
     User {
         /// The id of the user to fetch tweets for
         #[arg(long)]
         id: String,
+
+        /// Number of results to fetch
+        #[arg(long, default_value_t = 10)]
+        max_results: u8,
+
+        #[arg(long)]
+        since_id: Option<String>,
+
+        #[arg(long)]
+        until_id: Option<String>,
+
+        #[command(flatten)]
+        search_time: SearchTimeArgs,
     },
 
     /// Search recent tweets
@@ -534,6 +659,13 @@ enum TweetsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        /// Sort order (recency or relevancy)
+        #[arg(long)]
+        sort_order: Option<String>,
+
+        #[command(flatten)]
+        search_time: SearchTimeArgs,
     },
 
     /// Get recent tweet counts for a search query
@@ -541,6 +673,13 @@ enum TweetsEnum {
         /// Search query
         #[arg(long)]
         query: String,
+
+        /// Bucket granularity (minute, hour, day)
+        #[arg(long)]
+        granularity: Option<String>,
+
+        #[command(flatten)]
+        search_time: SearchTimeArgs,
     },
 
     /// Search all tweets
@@ -552,6 +691,13 @@ enum TweetsEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u16,
+
+        /// Sort order (recency or relevancy)
+        #[arg(long)]
+        sort_order: Option<String>,
+
+        #[command(flatten)]
+        search_time: SearchTimeArgs,
     },
 
     /// Get all-time tweet counts for a search query
@@ -559,6 +705,13 @@ enum TweetsEnum {
         /// Search query
         #[arg(long)]
         query: String,
+
+        /// Bucket granularity (minute, hour, day)
+        #[arg(long)]
+        granularity: Option<String>,
+
+        #[command(flatten)]
+        search_time: SearchTimeArgs,
     },
 }
 
@@ -601,6 +754,9 @@ enum UsersEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Fetch a user's followers
@@ -612,6 +768,9 @@ enum UsersEnum {
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
         max_results: u8,
+
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
 
     /// Follow a user for the current authenticated user
@@ -689,6 +848,8 @@ pub fn run() {
         Commands::Tweet {
             body,
             image,
+            reply_to,
+            quote_tweet_id,
             editor,
         } => {
             let mut media_id: Option<String> = None;
@@ -740,8 +901,13 @@ pub fn run() {
 
             let mut payload = TweetBody {
                 text: tweet_body,
-                reply: None,
+                reply: reply_to.map(|tweet_id| Reply {
+                    in_reply_to_tweet_id: tweet_id,
+                }),
                 media: None,
+                quote_tweet_id: quote_tweet_id.map(|tweet_id| QuoteTweet {
+                    quote_tweet_id: tweet_id,
+                }),
             };
 
             if let Some(media) = media_id {
@@ -806,59 +972,89 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            TweetsEnum::User { id } => {
-                let tweets = twitter::tweets::UserTweets::new(id).max_results(10).fetch();
-                match tweets {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No tweets found.");
-                            return;
-                        }
+            TweetsEnum::Edit { id, body } => {
+                let edit = twitter::tweet::EditTweet::new(id, body);
 
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                match edit.send() {
+                    Ok(ok) => println!("{}", ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            TweetsEnum::Recent { query, max_results } => {
-                let tweets = twitter::tweets::RecentTweets::new(query)
-                    .max_results(max_results)
-                    .fetch();
-                match tweets {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No recent tweets found.");
-                            return;
-                        }
+            TweetsEnum::User {
+                id,
+                max_results,
+                since_id,
+                until_id,
+                search_time,
+            } => {
+                let mut request = twitter::tweets::UserTweets::new(id).max_results(max_results);
+                if let Some(token) = search_time.pagination.pagination_token {
+                    request = request.pagination_token(token);
+                }
+                if let Some(value) = search_time.start_time {
+                    request = request.start_time(value);
+                }
+                if let Some(value) = search_time.end_time {
+                    request = request.end_time(value);
+                }
+                if let Some(value) = since_id {
+                    request = request.since_id(value);
+                }
+                if let Some(value) = until_id {
+                    request = request.until_id(value);
+                }
 
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                match request.fetch() {
+                    Ok(ok) => twitter::tweets::print_tweets(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            TweetsEnum::CountRecent { query } => {
-                let counts = twitter::tweets::RecentTweetCounts::new(query).fetch();
-                match counts {
+            TweetsEnum::Recent {
+                query,
+                max_results,
+                sort_order,
+                search_time,
+            } => {
+                let mut request =
+                    twitter::tweets::RecentTweets::new(query).max_results(max_results);
+                if let Some(value) = sort_order {
+                    request = request.sort_order(value);
+                }
+                if let Some(token) = search_time.pagination.pagination_token {
+                    request = request.pagination_token(token);
+                }
+                if let Some(value) = search_time.start_time {
+                    request = request.start_time(value);
+                }
+                if let Some(value) = search_time.end_time {
+                    request = request.end_time(value);
+                }
+
+                match request.fetch() {
+                    Ok(ok) => twitter::tweets::print_tweets(&ok.content),
+                    Err(err) => eprintln!("{}", err.message),
+                }
+            }
+            TweetsEnum::CountRecent {
+                query,
+                granularity,
+                search_time,
+            } => {
+                let mut request = twitter::tweets::RecentTweetCounts::new(query);
+                if let Some(value) = granularity {
+                    request = request.granularity(value);
+                }
+                if let Some(token) = search_time.pagination.pagination_token {
+                    request = request.pagination_token(token);
+                }
+                if let Some(value) = search_time.start_time {
+                    request = request.start_time(value);
+                }
+                if let Some(value) = search_time.end_time {
+                    request = request.end_time(value);
+                }
+
+                match request.fetch() {
                     Ok(ok) => {
                         if ok.content.data.is_empty() {
                             println!("No tweet counts found.");
@@ -866,39 +1062,61 @@ pub fn run() {
                         }
 
                         println!("{}", ok.content);
+                        twitter::params::print_next_page_hint(
+                            ok.content
+                                .meta
+                                .as_ref()
+                                .and_then(|meta| meta.next_token.as_deref()),
+                        );
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            TweetsEnum::All { query, max_results } => {
-                let tweets = twitter::tweets::AllTweets::new(query)
-                    .max_results(max_results)
-                    .fetch();
-                match tweets {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No tweets found.");
-                            return;
-                        }
+            TweetsEnum::All {
+                query,
+                max_results,
+                sort_order,
+                search_time,
+            } => {
+                let mut request = twitter::tweets::AllTweets::new(query).max_results(max_results);
+                if let Some(value) = sort_order {
+                    request = request.sort_order(value);
+                }
+                if let Some(token) = search_time.pagination.pagination_token {
+                    request = request.pagination_token(token);
+                }
+                if let Some(value) = search_time.start_time {
+                    request = request.start_time(value);
+                }
+                if let Some(value) = search_time.end_time {
+                    request = request.end_time(value);
+                }
 
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                match request.fetch() {
+                    Ok(ok) => twitter::tweets::print_tweets(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            TweetsEnum::CountAll { query } => {
-                let counts = twitter::tweets::AllTweetCounts::new(query).fetch();
-                match counts {
+            TweetsEnum::CountAll {
+                query,
+                granularity,
+                search_time,
+            } => {
+                let mut request = twitter::tweets::AllTweetCounts::new(query);
+                if let Some(value) = granularity {
+                    request = request.granularity(value);
+                }
+                if let Some(token) = search_time.pagination.pagination_token {
+                    request = request.pagination_token(token);
+                }
+                if let Some(value) = search_time.start_time {
+                    request = request.start_time(value);
+                }
+                if let Some(value) = search_time.end_time {
+                    request = request.end_time(value);
+                }
+
+                match request.fetch() {
                     Ok(ok) => {
                         if ok.content.data.is_empty() {
                             println!("No tweet counts found.");
@@ -906,6 +1124,12 @@ pub fn run() {
                         }
 
                         println!("{}", ok.content);
+                        twitter::params::print_next_page_hint(
+                            ok.content
+                                .meta
+                                .as_ref()
+                                .and_then(|meta| meta.next_token.as_deref()),
+                        );
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }
@@ -1039,18 +1263,16 @@ pub fn run() {
             LikesEnum::By {
                 tweet_id,
                 max_results,
+                pagination,
             } => {
-                let users = twitter::likes::LikingUsers::new(tweet_id).max_results(max_results);
+                let users = paginate(
+                    twitter::likes::LikingUsers::new(tweet_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |users, token| users.pagination_token(token),
+                );
 
                 match users.fetch() {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No liking users found.");
-                            return;
-                        }
-
-                        println!("{}", ok.content);
-                    }
+                    Ok(ok) => twitter::likes::print_liking_users(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
@@ -1088,7 +1310,10 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            LikesEnum::Tweets {} => {
+            LikesEnum::Tweets {
+                max_results,
+                pagination,
+            } => {
                 let user_id = match utils::get_current_user_id() {
                     Ok(id) => id,
                     Err(err) => {
@@ -1097,56 +1322,34 @@ pub fn run() {
                     }
                 };
 
-                let likes = twitter::likes::Likes::new(user_id).max_results(10);
-                let likes_res = likes.fetch();
-                match likes_res {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No liked tweets found.");
-                            return;
-                        }
+                let likes = paginate(
+                    twitter::likes::Likes::new(user_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |likes, token| likes.pagination_token(token),
+                );
 
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                match likes.fetch() {
+                    Ok(ok) => twitter::likes::print_likes(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
         },
         Commands::Bookmarks { command } => match command {
-            BookmarksEnum::List { max_results } => {
-                let bookmarks = twitter::bookmarks::Bookmarks::current_user()
-                    .map(|bookmarks| bookmarks.max_results(max_results));
+            BookmarksEnum::List {
+                max_results,
+                pagination,
+            } => {
+                let bookmarks = twitter::bookmarks::Bookmarks::current_user().map(|bookmarks| {
+                    paginate(
+                        bookmarks.max_results(max_results),
+                        pagination.pagination_token,
+                        |bookmarks, token| bookmarks.pagination_token(token),
+                    )
+                });
 
                 match bookmarks {
                     Ok(bookmarks) => match bookmarks.fetch() {
-                        Ok(ok) => {
-                            let tweets = ok.content.data;
-                            let includes = ok.content.includes;
-                            if tweets.is_empty() {
-                                println!("No bookmarks found.");
-                                return;
-                            }
-
-                            for tweet in tweets {
-                                println!(
-                                    "{}\n",
-                                    twitter::TweetCreateResponse {
-                                        data: tweet,
-                                        includes: includes.clone(),
-                                    }
-                                );
-                            }
-                        }
+                        Ok(ok) => twitter::bookmarks::print_bookmarks(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1186,20 +1389,21 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            BookmarksEnum::Folders { max_results } => {
-                let folders = twitter::bookmarks::BookmarkFolders::current_user()
-                    .map(|folders| folders.max_results(max_results));
+            BookmarksEnum::Folders {
+                max_results,
+                pagination,
+            } => {
+                let folders = twitter::bookmarks::BookmarkFolders::current_user().map(|folders| {
+                    paginate(
+                        folders.max_results(max_results),
+                        pagination.pagination_token,
+                        |folders, token| folders.pagination_token(token),
+                    )
+                });
 
                 match folders {
                     Ok(folders) => match folders.fetch() {
-                        Ok(ok) => {
-                            if ok.content.data.is_empty() {
-                                println!("No bookmark folders found.");
-                                return;
-                            }
-
-                            println!("{}", ok.content);
-                        }
+                        Ok(ok) => twitter::bookmarks::print_bookmark_folders(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1208,30 +1412,20 @@ pub fn run() {
             BookmarksEnum::Folder {
                 folder_id,
                 max_results,
+                pagination,
             } => {
                 let bookmarks = twitter::bookmarks::BookmarkFolderTweets::current_user(folder_id)
-                    .map(|bookmarks| bookmarks.max_results(max_results));
+                    .map(|bookmarks| {
+                        paginate(
+                            bookmarks.max_results(max_results),
+                            pagination.pagination_token,
+                            |bookmarks, token| bookmarks.pagination_token(token),
+                        )
+                    });
 
                 match bookmarks {
                     Ok(bookmarks) => match bookmarks.fetch() {
-                        Ok(ok) => {
-                            let tweets = ok.content.data;
-                            let includes = ok.content.includes;
-                            if tweets.is_empty() {
-                                println!("No bookmarks found in the folder.");
-                                return;
-                            }
-
-                            for tweet in tweets {
-                                println!(
-                                    "{}\n",
-                                    twitter::TweetCreateResponse {
-                                        data: tweet,
-                                        includes: includes.clone(),
-                                    }
-                                );
-                            }
-                        }
+                        Ok(ok) => twitter::bookmarks::print_folder_tweets(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1261,9 +1455,17 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            ListsEnum::Owned { max_results } => {
-                let lists = twitter::lists::OwnedLists::current_user()
-                    .map(|lists| lists.max_results(max_results));
+            ListsEnum::Owned {
+                max_results,
+                pagination,
+            } => {
+                let lists = twitter::lists::OwnedLists::current_user().map(|lists| {
+                    paginate(
+                        lists.max_results(max_results),
+                        pagination.pagination_token,
+                        |lists, token| lists.pagination_token(token),
+                    )
+                });
 
                 match lists {
                     Ok(lists) => match lists.fetch() {
@@ -1274,6 +1476,12 @@ pub fn run() {
                             }
 
                             println!("{}", ok.content);
+                            twitter::params::print_next_page_hint(
+                                ok.content
+                                    .meta
+                                    .as_ref()
+                                    .and_then(|meta| meta.next_token.as_deref()),
+                            );
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
@@ -1324,8 +1532,13 @@ pub fn run() {
             ListsEnum::Members {
                 list_id,
                 max_results,
+                pagination,
             } => {
-                let members = twitter::lists::ListMembers::new(list_id).max_results(max_results);
+                let members = paginate(
+                    twitter::lists::ListMembers::new(list_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |members, token| members.pagination_token(token),
+                );
 
                 match members.fetch() {
                     Ok(ok) => {
@@ -1335,6 +1548,12 @@ pub fn run() {
                         }
 
                         println!("{}", ok.content);
+                        twitter::params::print_next_page_hint(
+                            ok.content
+                                .meta
+                                .as_ref()
+                                .and_then(|meta| meta.next_token.as_deref()),
+                        );
                     }
                     Err(err) => eprintln!("{}", err.message),
                 }
@@ -1342,28 +1561,16 @@ pub fn run() {
             ListsEnum::Tweets {
                 list_id,
                 max_results,
+                pagination,
             } => {
-                let tweets = twitter::lists::ListTweets::new(list_id).max_results(max_results);
+                let tweets = paginate(
+                    twitter::lists::ListTweets::new(list_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |tweets, token| tweets.pagination_token(token),
+                );
 
                 match tweets.fetch() {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No list tweets found.");
-                            return;
-                        }
-
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                    Ok(ok) => twitter::lists::print_list_tweets(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
@@ -1401,9 +1608,17 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            ListsEnum::Memberships { max_results } => {
-                let lists = twitter::lists::ListMemberships::current_user()
-                    .map(|lists| lists.max_results(max_results));
+            ListsEnum::Memberships {
+                max_results,
+                pagination,
+            } => {
+                let lists = twitter::lists::ListMemberships::current_user().map(|lists| {
+                    paginate(
+                        lists.max_results(max_results),
+                        pagination.pagination_token,
+                        |lists, token| lists.pagination_token(token),
+                    )
+                });
 
                 match lists {
                     Ok(lists) => match lists.fetch() {
@@ -1414,6 +1629,12 @@ pub fn run() {
                             }
 
                             println!("{}", ok.content);
+                            twitter::params::print_next_page_hint(
+                                ok.content
+                                    .meta
+                                    .as_ref()
+                                    .and_then(|meta| meta.next_token.as_deref()),
+                            );
                         }
                         Err(err) => eprintln!("{}", err.message),
                     },
@@ -1425,36 +1646,35 @@ pub fn run() {
             DmsEnum::ConversationEvents {
                 conversation_id,
                 max_results,
+                pagination,
             } => {
-                let events = twitter::dms::ConversationDmEvents::new(conversation_id)
-                    .max_results(max_results);
+                let events = paginate(
+                    twitter::dms::ConversationDmEvents::new(conversation_id)
+                        .max_results(max_results),
+                    pagination.pagination_token,
+                    |events, token| events.pagination_token(token),
+                );
 
                 match events.fetch() {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No conversation DM events found.");
-                            return;
-                        }
-
-                        println!("{}", ok.content);
-                    }
+                    Ok(ok) => twitter::dms::print_conversation_dm_events(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            DmsEnum::Events { max_results } => {
-                let events = twitter::dms::UserDmEvents::current_user()
-                    .map(|events| events.max_results(max_results));
+            DmsEnum::Events {
+                max_results,
+                pagination,
+            } => {
+                let events = twitter::dms::UserDmEvents::current_user().map(|events| {
+                    paginate(
+                        events.max_results(max_results),
+                        pagination.pagination_token,
+                        |events, token| events.pagination_token(token),
+                    )
+                });
 
                 match events {
                     Ok(events) => match events.fetch() {
-                        Ok(ok) => {
-                            if ok.content.data.is_empty() {
-                                println!("No DM events found.");
-                                return;
-                            }
-
-                            println!("{}", ok.content);
-                        }
+                        Ok(ok) => twitter::dms::print_user_dm_events(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1463,19 +1683,16 @@ pub fn run() {
             DmsEnum::With {
                 participant_id,
                 max_results,
+                pagination,
             } => {
-                let events =
-                    twitter::dms::ParticipantDmEvents::new(participant_id).max_results(max_results);
+                let events = paginate(
+                    twitter::dms::ParticipantDmEvents::new(participant_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |events, token| events.pagination_token(token),
+                );
 
                 match events.fetch() {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No participant DM events found.");
-                            return;
-                        }
-
-                        println!("{}", ok.content);
-                    }
+                    Ok(ok) => twitter::dms::print_participant_dm_events(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
@@ -1517,18 +1734,16 @@ pub fn run() {
             RetweetsEnum::By {
                 tweet_id,
                 max_results,
+                pagination,
             } => {
-                let users = twitter::retweets::RetweetedBy::new(tweet_id).max_results(max_results);
+                let users = paginate(
+                    twitter::retweets::RetweetedBy::new(tweet_id).max_results(max_results),
+                    pagination.pagination_token,
+                    |users, token| users.pagination_token(token),
+                );
 
                 match users.fetch() {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No retweeters found.");
-                            return;
-                        }
-
-                        println!("{}", ok.content);
-                    }
+                    Ok(ok) => twitter::retweets::print_retweeted_by(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
@@ -1585,20 +1800,21 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            MutesEnum::List { max_results } => {
-                let users = twitter::mutes::MutedUsers::current_user()
-                    .map(|users| users.max_results(max_results));
+            MutesEnum::List {
+                max_results,
+                pagination,
+            } => {
+                let users = twitter::mutes::MutedUsers::current_user().map(|users| {
+                    paginate(
+                        users.max_results(max_results),
+                        pagination.pagination_token,
+                        |users, token| users.pagination_token(token),
+                    )
+                });
 
                 match users {
                     Ok(users) => match users.fetch() {
-                        Ok(ok) => {
-                            if ok.content.data.is_empty() {
-                                println!("No muted users found.");
-                                return;
-                            }
-
-                            println!("{}", ok.content);
-                        }
+                        Ok(ok) => twitter::mutes::print_muted_users(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1640,20 +1856,21 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            BlocksEnum::List { max_results } => {
-                let users = twitter::blocks::BlockedUsers::current_user()
-                    .map(|users| users.max_results(max_results));
+            BlocksEnum::List {
+                max_results,
+                pagination,
+            } => {
+                let users = twitter::blocks::BlockedUsers::current_user().map(|users| {
+                    paginate(
+                        users.max_results(max_results),
+                        pagination.pagination_token,
+                        |users, token| users.pagination_token(token),
+                    )
+                });
 
                 match users {
                     Ok(users) => match users.fetch() {
-                        Ok(ok) => {
-                            if ok.content.data.is_empty() {
-                                println!("No blocked users found.");
-                                return;
-                            }
-
-                            println!("{}", ok.content);
-                        }
+                        Ok(ok) => twitter::blocks::print_blocked_users(&ok.content),
                         Err(err) => eprintln!("{}", err.message),
                     },
                     Err(err) => eprintln!("{}", err.message),
@@ -1678,7 +1895,10 @@ pub fn run() {
             }
         },
         Commands::Timeline { command } => match command {
-            TimelineEnum::ReverseChronological {} => {
+            TimelineEnum::ReverseChronological {
+                max_results,
+                pagination,
+            } => {
                 let user_id = match utils::get_current_user_id() {
                     Ok(id) => id,
                     Err(err) => {
@@ -1687,32 +1907,22 @@ pub fn run() {
                     }
                 };
 
-                let timeline = twitter::timeline::Timeline::new(user_id).max_results(10);
-                let timeline_res = timeline.fetch();
-                match timeline_res {
-                    Ok(ok) => {
-                        let tweets = ok.content.data;
-                        let includes = ok.content.includes;
-                        if tweets.is_empty() {
-                            println!("No tweets found in timeline.");
-                            return;
-                        }
+                let mut timeline =
+                    twitter::timeline::Timeline::new(user_id).max_results(max_results);
+                if let Some(token) = pagination.pagination_token {
+                    timeline = timeline.pagination_token(token);
+                }
 
-                        for tweet in tweets {
-                            println!(
-                                "{}\n",
-                                twitter::TweetCreateResponse {
-                                    data: tweet,
-                                    includes: includes.clone(),
-                                }
-                            );
-                        }
-                    }
+                match timeline.fetch() {
+                    Ok(ok) => twitter::timeline::print_timeline(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
         },
-        Commands::Mentions {} => {
+        Commands::Mentions {
+            max_results,
+            pagination,
+        } => {
             let user_id = match utils::get_current_user_id() {
                 Ok(id) => id,
                 Err(err) => {
@@ -1721,27 +1931,13 @@ pub fn run() {
                 }
             };
 
-            let mentions = twitter::mentions::Mentions::new(user_id).max_results(10);
-            let mentions_res = mentions.fetch();
-            match mentions_res {
-                Ok(ok) => {
-                    let tweets = ok.content.data;
-                    let includes = ok.content.includes;
-                    if tweets.is_empty() {
-                        println!("No mentions found.");
-                        return;
-                    }
+            let mut mentions = twitter::mentions::Mentions::new(user_id).max_results(max_results);
+            if let Some(token) = pagination.pagination_token {
+                mentions = mentions.pagination_token(token);
+            }
 
-                    for tweet in tweets {
-                        println!(
-                            "{}\n",
-                            twitter::TweetCreateResponse {
-                                data: tweet,
-                                includes: includes.clone(),
-                            }
-                        );
-                    }
-                }
+            match mentions.fetch() {
+                Ok(ok) => twitter::mentions::print_mentions(&ok.content),
                 Err(err) => eprintln!("{}", err.message),
             }
         }
@@ -1837,35 +2033,35 @@ pub fn run() {
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            UsersEnum::Following { id, max_results } => {
-                let users = twitter::follows::Following::new(id)
-                    .max_results(max_results)
-                    .fetch();
-                match users {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No following users found.");
-                            return;
-                        }
+            UsersEnum::Following {
+                id,
+                max_results,
+                pagination,
+            } => {
+                let users = paginate(
+                    twitter::follows::Following::new(id).max_results(max_results),
+                    pagination.pagination_token,
+                    |users, token| users.pagination_token(token),
+                );
 
-                        println!("{}", ok.content);
-                    }
+                match users.fetch() {
+                    Ok(ok) => twitter::follows::print_following(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }
-            UsersEnum::Followers { id, max_results } => {
-                let users = twitter::follows::Followers::new(id)
-                    .max_results(max_results)
-                    .fetch();
-                match users {
-                    Ok(ok) => {
-                        if ok.content.data.is_empty() {
-                            println!("No followers found.");
-                            return;
-                        }
+            UsersEnum::Followers {
+                id,
+                max_results,
+                pagination,
+            } => {
+                let users = paginate(
+                    twitter::follows::Followers::new(id).max_results(max_results),
+                    pagination.pagination_token,
+                    |users, token| users.pagination_token(token),
+                );
 
-                        println!("{}", ok.content);
-                    }
+                match users.fetch() {
+                    Ok(ok) => twitter::follows::print_followers(&ok.content),
                     Err(err) => eprintln!("{}", err.message),
                 }
             }

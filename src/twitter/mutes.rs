@@ -1,7 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    twitter::Response,
+    twitter::{
+        Response, USER_FIELDS,
+        params::{
+            Pagination, apply_query_params, oauth_param_list, paginated_oauth_entries,
+            print_next_page_hint, user_field_entries,
+        },
+    },
     utils::{get_current_user_id, oauth_get_header, oauth_post_header},
 };
 
@@ -39,7 +45,6 @@ pub struct DeleteMuteError {
 pub struct MutedUsersMeta {
     #[allow(dead_code)]
     pub result_count: u32,
-    #[allow(dead_code)]
     pub next_token: Option<String>,
     #[allow(dead_code)]
     pub previous_token: Option<String>,
@@ -81,6 +86,7 @@ pub struct DeleteMute {
 pub struct MutedUsers {
     user_id: String,
     max_results: u8,
+    pagination: Pagination,
 }
 
 #[derive(Serialize)]
@@ -94,11 +100,17 @@ impl MutedUsers {
         Ok(Self {
             user_id,
             max_results: 10,
+            pagination: Pagination::new(),
         })
     }
 
     pub fn max_results(mut self, max_results: u8) -> Self {
         self.max_results = max_results.clamp(1, 100);
+        self
+    }
+
+    pub fn pagination_token(mut self, token: impl Into<String>) -> Self {
+        self.pagination = self.pagination.pagination_token(token);
         self
     }
 
@@ -108,13 +120,19 @@ impl MutedUsers {
 
     pub fn fetch(&self) -> Result<Response<MutedUsersResponse>, MutedUsersError> {
         let url = self.url();
-        let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let oauth_entries =
+            paginated_oauth_entries(self.max_results, &user_field_entries(), &self.pagination);
+        let auth_header = oauth_get_header(url.as_str(), &oauth_param_list(oauth_entries));
 
-        let response = curl_rest::Client::default()
+        let max_results_query = self.max_results.to_string();
+        let pagination_entries = self.pagination.oauth_entries();
+        let mut request = curl_rest::Client::default()
             .get()
-            .query_param_kv("max_results", max_results.as_str())
-            .query_param_kv("user.fields", "name,username")
+            .query_param_kv("max_results", max_results_query.as_str())
+            .query_param_kv("user.fields", USER_FIELDS);
+        request = apply_query_params(request, &pagination_entries);
+
+        let response = request
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| MutedUsersError {
@@ -233,6 +251,32 @@ impl DeleteMute {
     }
 }
 
+pub fn print_muted_users(response: &MutedUsersResponse) {
+    if response.data.is_empty() {
+        println!("No muted users found.");
+        return;
+    }
+
+    for (index, user) in response.data.iter().enumerate() {
+        if index > 0 {
+            println!();
+            println!();
+        }
+
+        println!(
+            "User Id: {}\nName: {}\nUsername: @{}",
+            user.id, user.name, user.username
+        );
+    }
+
+    print_next_page_hint(
+        response
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.next_token.as_deref()),
+    );
+}
+
 impl std::fmt::Display for MutedUsersResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, user) in self.data.iter().enumerate() {
@@ -261,6 +305,7 @@ mod tests {
         let endpoint = MutedUsers {
             user_id: "42".to_string(),
             max_results: 10,
+            pagination: Pagination::new(),
         };
 
         assert_eq!(endpoint.url(), "https://api.x.com/2/users/42/muting");
