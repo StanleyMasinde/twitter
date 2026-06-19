@@ -70,7 +70,7 @@ This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participati
 
 4. **Create a branch** for your work:
    ```bash
-   git checkout -b feature/your-feature-name
+   git switch -c feature/your-feature-name
    ```
 
 ## Development Process
