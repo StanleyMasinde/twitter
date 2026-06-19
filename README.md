@@ -51,15 +51,6 @@ If `twitter` is installed in `/usr/local/bin` (default install location), that d
 
 If you installed to a user-writable location (for example with `TWITTER_INSTALL=~/.local/bin`), `sudo` is not required.
 
-#### ArchLinux
-ArchLinux users can install the community maintained AUR binary [package](https://aur.archlinux.org/packages/twitter-cli) using yay or any other AUR helper:
-```bash
-yay -S twitter-cli
-```
->[!WARNING]
-> The AUR package is managed by the community. 
-> Please use the install script for other Unix based systems.
-
 After installation the executable is available as `twitter`
 
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
