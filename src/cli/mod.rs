@@ -1,3 +1,7 @@
+use crate::twitter::tweet::{
+    self,
+    types::{Media, TweetBody, TwitterApi},
+};
 pub mod config;
 pub mod update;
 
@@ -11,14 +15,11 @@ use std::{
 use clap::{Parser, Subcommand, ValueEnum};
 use tabled::builder::Builder;
 
-use crate::{schedule, utils::send_due_tweets};
 use crate::{
-    twitter::{
-        self,
-        tweet::{self, Media, TweetBody, TwitterApi},
-    },
+    schedule,
+    twitter::{self},
     usage,
-    utils::{self, gracefully_exit},
+    utils::{self, gracefully_exit, send_due_tweets},
 };
 
 #[derive(Parser, Debug)]
@@ -757,7 +758,7 @@ pub fn run() {
                 Ok(ok) => {
                     println!("{}", ok.content)
                 }
-                Err(err) => println!("{}", err.message),
+                Err(err) => println!("{}", err),
             }
         }
         Commands::Tweets { command } => match command {

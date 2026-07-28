@@ -1,95 +1,15 @@
-use std::fmt::Error;
-use std::str::FromStr;
+pub use crate::{
+    twitter::{
+        Response, TweetCreateResponse, TweetData,
+        tweet::types::{
+            CreateTweetError, DeleteTweet, DeleteTweetErr, DeleteTweetResponse, Reply, Tweet,
+            TweetBody, TwitterApi,
+        },
+    },
+    utils::oauth_post_header,
+};
 
-use crate::twitter::{Response, TweetCreateResponse, TweetData};
-use crate::utils::oauth_post_header;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Deserialize)]
-pub struct CreateTweetErr {
-    pub message: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeleteTweetData {
-    pub deleted: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeleteTweetResponse {
-    pub data: DeleteTweetData,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeleteTweetErr {
-    pub message: String,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct TweetBody {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reply: Option<Reply>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub media: Option<Media>,
-}
-
-impl FromStr for TweetBody {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            text: Some(s.to_owned()),
-            reply: None,
-            media: None,
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Reply {
-    pub in_reply_to_tweet_id: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Media {
-    pub media_ids: Vec<String>,
-}
-
-pub trait TwitterApi {
-    fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr>;
-}
-
-#[derive(Default)]
-pub struct Tweet<'t> {
-    previous_tweet: Option<String>,
-    separator: &'t str,
-    payload: TweetBody,
-    tweet_parts: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct DeleteTweet {
-    tweet_id: String,
-}
-
-impl<'t> FromStr for Tweet<'t> {
-    type Err = CreateTweetErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            previous_tweet: None,
-            separator: "---",
-            payload: TweetBody {
-                text: Some(s.to_string()),
-                reply: None,
-                media: None,
-            },
-            tweet_parts: vec![],
-        })
-    }
-}
+pub mod types;
 
 impl<'t> Tweet<'t> {
     pub fn new(payload: TweetBody) -> Self {
@@ -114,7 +34,7 @@ impl<'t> Tweet<'t> {
             .collect()
     }
 
-    fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetErr> {
+    fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetError> {
         let url = "https://api.twitter.com/2/tweets";
         let auth_header = oauth_post_header(url, &());
         let media = self.payload.media.clone();
@@ -141,8 +61,11 @@ impl<'t> Tweet<'t> {
             media,
         };
 
-        let body = serde_json::to_string(&new_tweet).map_err(|e| CreateTweetErr {
-            message: e.to_string(),
+        let body = serde_json::to_string(&new_tweet).map_err(|e| CreateTweetError {
+            detail: "Error".to_string(),
+            status: 400,
+            title: e.to_string(),
+            type_field: "payload".to_string(),
         })?;
 
         let response = curl_rest::Client::default()
@@ -150,19 +73,29 @@ impl<'t> Tweet<'t> {
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .body_json(body)
             .send(url)
-            .map_err(|e| CreateTweetErr {
-                message: e.to_string(),
+            .map_err(|e| CreateTweetError {
+                detail: e.to_string(),
+                status: 500,
+                title: "Failed to send tweet.".to_string(),
+                type_field: "Network".to_string(),
             })?;
 
-        if (200..300).contains(&response.status.as_u16()) {
-            let res_data: TweetCreateResponse =
-                serde_json::from_slice(&response.body).map_err(|_| CreateTweetErr {
-                    message: "Invalid response body.".into(),
-                })?;
-            Ok(res_data)
-        } else {
-            let err_data = String::from_utf8_lossy(&response.body).to_string();
-            Err(CreateTweetErr { message: err_data })
+        match response.status.as_u16() {
+            200..300 => {
+                let res_data: TweetCreateResponse = serde_json::from_slice(&response.body)
+                    .map_err(|_| CreateTweetError {
+                        detail: "Failed to Serialize the response.".to_string(),
+                        status: 500,
+                        title: "Serialization error".to_string(),
+                        type_field: "Response".to_string(),
+                    })?;
+                Ok(res_data)
+            }
+            _ => {
+                let err_data = String::from_utf8_lossy(&response.body).to_string();
+                let create_tweet_error: CreateTweetError = serde_json::from_str(&err_data).unwrap();
+                Err(create_tweet_error)
+            }
         }
     }
 }
@@ -207,7 +140,7 @@ impl DeleteTweet {
 }
 
 impl<'t> TwitterApi for Tweet<'t> {
-    fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetErr> {
+    fn create(&mut self) -> Result<Response<TweetCreateResponse>, CreateTweetError> {
         let text = self.payload.text.clone().unwrap_or_default();
         let tweet_data = TweetData {
             text: "".to_string(),

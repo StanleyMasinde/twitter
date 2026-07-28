@@ -180,9 +180,9 @@ pub(crate) fn send_due_tweets() {
             Err(err) => {
                 eprintln!(
                     "Failed to build tweet payload for schedule id {}: {}",
-                    due_tweet.id, err.message
+                    due_tweet.id, err.title
                 );
-                schedule.mark_failed(due_tweet.id, &err.message);
+                schedule.mark_failed(due_tweet.id, &err.title);
                 failed_count += 1;
                 continue;
             }
@@ -195,8 +195,8 @@ pub(crate) fn send_due_tweets() {
                 sent_count += 1;
             }
             Err(err) => {
-                eprintln!("{}", err.message);
-                schedule.mark_failed(due_tweet.id, &err.message);
+                eprintln!("{}", err.title);
+                schedule.mark_failed(due_tweet.id, &err.title);
                 failed_count += 1;
             }
         }
