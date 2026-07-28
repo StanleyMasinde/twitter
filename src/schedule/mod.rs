@@ -86,12 +86,16 @@ impl Schedule {
             Err(_) => gracefully_exit("Invalid tweet body."),
         };
 
-        let zone_local_time = match parse_datetime(time) {
+        let parsed_time = match parse_datetime(time) {
             Ok(parsed_time) => parsed_time,
             Err(err) => {
                 gracefully_exit(&format!("Invalid scheduled time '{time}': {err}"));
             }
         };
+
+        let zone_local_time = parsed_time.as_zoned().unwrap_or_else(|| {
+            gracefully_exit(&format!("Invalid time {}, supplied", time));
+        });
 
         let mut send_time = zone_local_time.timestamp();
         if send_time < Timestamp::now() {
@@ -347,7 +351,11 @@ mod test {
     #[test]
     fn roll_forward_when_past() {
         let got = Schedule::new("body", "2026-01-01 09:00").send_time;
-        let expected = parse_datetime("2026-01-02 09:00").unwrap().timestamp();
+        let expected = parse_datetime("2026-01-02 09:00")
+            .unwrap()
+            .as_zoned()
+            .unwrap()
+            .timestamp();
 
         assert_eq!(got, expected);
     }
@@ -355,7 +363,11 @@ mod test {
     #[test]
     fn keep_when_not_past() {
         let got = Schedule::new("body", "2099-01-01 09:00").send_time;
-        let expected = parse_datetime("2099-01-01 09:00").unwrap().timestamp();
+        let expected = parse_datetime("2099-01-01 09:00")
+            .unwrap()
+            .as_zoned()
+            .unwrap()
+            .timestamp();
 
         assert_eq!(got, expected);
     }
@@ -363,7 +375,11 @@ mod test {
     #[test]
     fn roll_forward_non_time_input_when_past() {
         let got = Schedule::new("body", "2026-01-01 09:00").send_time;
-        let expected = parse_datetime("2026-01-02 09:00").unwrap().timestamp();
+        let expected = parse_datetime("2026-01-02 09:00")
+            .unwrap()
+            .as_zoned()
+            .unwrap()
+            .timestamp();
 
         assert_eq!(got, expected);
     }
