@@ -65,6 +65,27 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      - name: Install native deps via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          if (-not (Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found at $vcpkgExe"
+          }
+
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install sqlite3/curl with vcpkg."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
