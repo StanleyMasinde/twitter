@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  BIN_NAME: git-release
+  BIN_NAME: twitter
 
 jobs:
   build:
