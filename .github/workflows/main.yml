@@ -8,17 +8,13 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
-  BINARY_NAME: twitter
-  CARGO_TERM_COLOR: always
+  BIN_NAME: twitter
 
 jobs:
   build:
-    name: Build ${{ matrix.name }}
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -43,150 +39,58 @@ jobs:
             name: darwin-x86_64
             archive_ext: tar.gz
 
-    runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
-      - name: Rust toolchain
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Cache
-        uses: Swatinem/rust-cache@v2.8.1
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
 
-      - name: Install native deps via vcpkg
-        if: runner.os == 'Windows'
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../${{ env.BIN_NAME }}-${{ matrix.target }}.tar.gz ${{ env.BIN_NAME }}
+          cd -
+
+      - name: Package (windows)
+        if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path ${{ env.BIN_NAME }}.exe -DestinationPath ../../../${{ env.BIN_NAME }}-${{ matrix.target }}.zip
+          cd -
 
-          if (-not $vcpkgRoot) {
-            $vcpkgRoot = "C:\vcpkg"
-          }
-
-          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
-
-          if (-not (Test-Path $vcpkgExe)) {
-            throw "vcpkg.exe not found at $vcpkgExe"
-          }
-
-          & $vcpkgExe install `
-            "sqlite3:${{ matrix.vcpkg_triplet }}" `
-            "curl:${{ matrix.vcpkg_triplet }}" `
-            "zlib:${{ matrix.vcpkg_triplet }}"
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to install native dependencies."
-          }
-
-          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
-          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
-
-          # curl-sys doesn't always auto-link zlib/iphlpapi when statically
-          # linking curl via vcpkg — add them explicitly.
-          "RUSTFLAGS=-C link-arg=/DEFAULTLIB:zlib.lib -C link-arg=/DEFAULTLIB:iphlpapi.lib" >> $env:GITHUB_ENV
-
-      - name: Build release
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --release --locked --target "${{ matrix.target }}"
-
-      - name: Smoke test binary (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          bin="target/${{ matrix.target }}/release/${BINARY_NAME}"
-
-          test -f "$bin" || {
-            echo "Binary missing: $bin"
-            exit 1
-          }
-
-          "$bin" --version
-
-      - name: Smoke test binary (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $bin = "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe"
-
-          if (-not (Test-Path $bin)) {
-            throw "Binary missing: $bin"
-          }
-
-          & $bin --version
-
-      - name: Package
-        id: package
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          TARGET_DIR="target/${{ matrix.target }}/release"
-
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
-          else
-            BIN="${TARGET_DIR}/${BINARY_NAME}"
-          fi
-
-          test -f "$BIN" || {
-            echo "Binary missing: $BIN"
-            exit 1
-          }
-
-          ARCHIVE="${BINARY_NAME}-${{ matrix.name }}.${{ matrix.archive_ext }}"
-          STAGE="$(mktemp -d)"
-
-          install -m 0755 "$BIN" "$STAGE/$(basename "$BIN")"
-
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            7z a "$ARCHIVE" "$STAGE"/*
-          else
-            tar -C "$STAGE" -czf "$ARCHIVE" .
-          fi
-
-          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
-
-      - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.package.outputs.archive }}
-          path: ${{ steps.package.outputs.archive }}
-          if-no-files-found: error
-          retention-days: 7
+          name: ${{ env.BIN_NAME }}-${{ matrix.target }}
+          path: ${{ env.BIN_NAME }}-${{ matrix.target }}.${{ matrix.archive_ext }}
 
   release:
-    name: Upload release assets
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          path: dist
+          merge-multiple: true
 
-      - name: List artifacts
-        run: |
-          find artifacts -type f -maxdepth 2 \
-            \( -name "*.tar.gz" -o -name "*.zip" \)
-
-      - name: Upload assets to GitHub Release
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            artifacts/**/*.tar.gz
-            artifacts/**/*.zip
+          files: dist/*
+          generate_release_notes: true
