@@ -87,9 +87,6 @@ jobs:
             throw "vcpkg.exe not found at $vcpkgExe"
           }
 
-          Write-Host "vcpkg root: $vcpkgRoot"
-          Write-Host "vcpkg triplet: ${{ matrix.vcpkg_triplet }}"
-
           & $vcpkgExe install `
             "sqlite3:${{ matrix.vcpkg_triplet }}" `
             "curl:${{ matrix.vcpkg_triplet }}" `
@@ -99,11 +96,12 @@ jobs:
             throw "Failed to install native dependencies."
           }
 
-          Write-Host "Installed packages:"
-          & $vcpkgExe list
-
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+
+          # curl-sys doesn't always auto-link zlib/iphlpapi when statically
+          # linking curl via vcpkg — add them explicitly.
+          "RUSTFLAGS=-C link-arg=/DEFAULTLIB:zlib.lib -C link-arg=/DEFAULTLIB:iphlpapi.lib" >> $env:GITHUB_ENV
 
       - name: Build release
         shell: bash
