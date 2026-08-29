@@ -449,9 +449,9 @@ dependencies = [
 
 [[package]]
 name = "curl-rest"
-version = "0.5.2"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f483559af6002c8c4d8644caf1a288b134aefdf4adcebffbc7ffb2e7a8cd278"
+checksum = "5d0cc7f16cc830d9963666dbf073110e7afa6cd2f95bb49f079c5b4515a64851"
 dependencies = [
  "brotli-decompressor",
  "curl",
@@ -1269,9 +1269,9 @@ dependencies = [
 
 [[package]]
 name = "parse_datetime"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f15dc0ed203652fed0fc0e2b4de76bca160565afe16507973df55e6407b84353"
+checksum = "503fd4c8b0685e5eb32a8276533611f63e3b44768e9e8724e73f6852c2542f82"
 dependencies = [
  "jiff",
  "num-traits",
