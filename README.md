@@ -56,6 +56,8 @@ After installation the executable is available as `twitter`
 You can also download the appropriate binary for your machine from [releases](https://github.com/StanleyMasinde/twitter/releases/latest):
 
 ### Windows
+> [!WARNING]
+> Windows recently stopped building and I removed it from CI. The latest Windows Version is 8 until I figure out what is happening. 
 
 #### Via PowerShell
 > Administrator privileges are only needed when writing to a protected directory.
