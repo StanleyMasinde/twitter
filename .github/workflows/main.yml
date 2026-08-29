@@ -43,13 +43,13 @@ jobs:
             os: windows-latest
             name: windows-x86_64
             archive_ext: zip
-            vcpkg_triplet: x64-windows-static-md
+            vcpkg_triplet: x64-windows-static
 
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
             name: windows-arm
             archive_ext: zip
-            vcpkg_triplet: arm64-windows-static-md
+            vcpkg_triplet: arm64-windows-static
 
     steps:
       - name: Checkout
