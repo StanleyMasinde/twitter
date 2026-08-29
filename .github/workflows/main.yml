@@ -43,18 +43,6 @@ jobs:
             name: darwin-x86_64
             archive_ext: tar.gz
 
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            name: windows-x86_64
-            archive_ext: zip
-            vcpkg_triplet: x64-windows-static-md
-
-          - target: aarch64-pc-windows-msvc
-            os: windows-11-arm
-            name: windows-arm
-            archive_ext: zip
-            vcpkg_triplet: arm64-windows-static-md
-
     runs-on: ${{ matrix.os }}
 
     steps:
