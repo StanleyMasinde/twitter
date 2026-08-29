@@ -64,7 +64,7 @@ impl TokenManager {
             });
 
         if let Ok(current_token) = token_exists {
-            // check if the token has expired
+            // Check if the token has expired
             let expiry_time: Timestamp = current_token.expires_at.parse().unwrap();
             let now = Timestamp::now();
             if now > expiry_time {

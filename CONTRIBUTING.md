@@ -15,7 +15,7 @@ Thank you for considering contributing to Twitter CLI! This document outlines th
 
 ## Code of Conduct
 
-This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
+This project follows our [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behaviour to the project maintainers.
 
 ## Getting Started
 
@@ -107,9 +107,9 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org)
 ### Types
 
 - **feat**: A new feature
-- **fix**: A bug fix
+- **fix**: A bugfix
 - **docs**: Documentation only changes
-- **style**: Changes that do not affect the meaning of the code (formatting, etc)
+- **style**: Changes that do not affect the meaning of the code (formatting, etc.)
 - **refactor**: A code change that neither fixes a bug nor adds a feature
 - **perf**: A code change that improves performance
 - **test**: Adding missing tests or correcting existing tests
@@ -133,7 +133,7 @@ docs: update README with server mode instructions
 
 ## Pull Request Process
 
-1. Update the README.md or documentation with details of changes if appropriate
+1. Update the README.MD or documentation with details of changes if appropriate
 2. The PR should work on the main development branch
 3. Include tests that cover your changes if applicable
 4. Follow the commit message conventions

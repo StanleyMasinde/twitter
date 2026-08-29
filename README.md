@@ -5,7 +5,7 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/StanleyMasinde/twitter/total)
 [![Build and test](https://github.com/StanleyMasinde/twitter/actions/workflows/rust.yml/badge.svg)](https://github.com/StanleyMasinde/twitter/actions/workflows/rust.yml)
 
-## What it does
+## What It Does
 I love creating content on Twitter but twitter.com leads to doomscrolling. This is my way of fighting that.
 
 Simple CLI for posting to Twitter using their API v2.
@@ -14,7 +14,7 @@ Simple CLI for posting to Twitter using their API v2.
 
 ### Unix/Linux
 
-#### Quick install
+#### Quick Install
 Install the latest version with the following command. If you prefer, review the script first.
 
 ```shell
@@ -32,12 +32,12 @@ Review the installer before running:
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh
 ```
 
-#### Install a specific version
+#### Install a Specific Version
 ```shell
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh -s v1.5.0
 ```
 
-#### Custom install location
+#### Custom Install Location
 ```shell
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | TWITTER_INSTALL=~/.local/bin sh
 ```
@@ -89,7 +89,7 @@ twitter update
 > For the CLI to run on Windows, ensure you have installed the latest C++ [redistributable runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) for your architecture.
 > After that installation, open the Windows Terminal and use Twitter CLI by typing twitter. 
 
-## Build from source on Windows
+## Build from Source on Windows
 Use PowerShell:
 
 ```powershell
@@ -146,7 +146,7 @@ $env:Path += ";$dest"
 
 ### Interactive Setup (Recommended)
 > [!WARNING]
-> This will override your existing config. Only run it on setup.
+> This will override your existing configuration. Only run it on setup.
 
 ```bash
 twitter config --init
@@ -156,9 +156,9 @@ twitter config --init
 ```bash
 twitter config --edit
 ```
-Opens your default editor (`$EDITOR`) with the config file. Creates `~/.config/twitter_cli/config.toml` if it doesn't exist.
+Opens your default editor (`$EDITOR`) with the configuration file. Creates `~/.config/twitter_cli/config.toml` if it doesn't exist.
 
-Expected format:
+Expected to format:
 ```toml
 # The account that will be used to tweet
 # Please note, current account uses 0 based index.
@@ -186,10 +186,10 @@ client_id = "your_oauth2_client_id"
 client_secret = "your_oauth2_client_secret"
 ```
 
-On `main` (not yet released), `client_id` and `client_secret` are required config fields for each account. Keep them populated even if you are not using OAuth 2.0-backed commands yet.
+On `main` (not yet released), `client_id` and `client_secret` are required configuration fields for each account. Keep them populated even if you are not using OAuth 2.0-backed commands yet.
 
 ### Manual Configuration
-Create config file at `~/.config/twitter_cli/config.toml` with the format above. Keep this file private since it contains API secrets.
+Create configuration file at `~/.config/twitter_cli/config.toml` with the format above. Keep this file private since it contains API secrets.
 
 ### Validation
 ```bash
@@ -203,11 +203,11 @@ If you face a 403 error when tweeting:
 1. In the Twitter Developer Portal, go to your App → **User authentication settings**
 2. Set **App permissions** to **Read and write**
 3. Save changes, then regenerate your Access Token & Secret
-4. Update your config with the new values
+4. Update your configuration with the new values
 
 > **NB:** Regenerate tokens after updating permissions, otherwise old tokens remain read-only.
 
-## Service Unavailable (503) when posting
+## Service Unavailable (503) When Posting
 If media upload works but `POST /2/tweets` fails with:
 
 ```json
@@ -228,8 +228,6 @@ check the following:
    ```
 5. Check your X API usage dashboard and logs to confirm write calls are not blocked by billing, limits, or temporary platform incidents.
 
-> **Note:** Some 503 responses are transient. If configuration and billing are correct, wait a few minutes and retry.
-
 ## Usage
 
 ### Tweet in CLI Mode
@@ -238,15 +236,15 @@ check the following:
 twitter tweet --body "Building something cool today"
 ```
 
-#### Piped input
+#### Piped Input
 ```bash
 echo "I love CLIs" | twitter tweet
 ```
-#### From text files
+#### From Text Files
 ```bash
 cat drafts.txt | twitter tweet
 ```
-#### Edit tweet in an editor
+#### Edit Tweet in an Editor
 Omit --body and it will launch your default terminal editor. Like Vim or Nano.
 ```bash
 twitter tweet
@@ -258,12 +256,12 @@ The parameter is image because I do not see the point of uploading video from th
 twitter tweet --image ~/Downloads/image.png
 ```
 
-### Tweet a thread
+### Tweet a Thread
 Threads are created whenever input contains `---` separators, regardless of input mode.
 ```bash
 twitter tweet --editor
 ```
-This will launch your default terminal editor. Separate your threads with --- like this.
+This will launch your default terminal editor. Separate your threads with `---` like this.
 ```txt
 This is a very long thread. This being the intro.
 ---
@@ -272,14 +270,14 @@ The three dashes indicate the boundary between tweets so this will be tweet 2.
 This will be tweet 3
 ```
 
-#### Thread via stdin
+#### Thread via Standard Input
 Pipe thread content with `---` separators.
 ```bash
 cat thread.txt | twitter tweet
 ```
 
-### Schedule tweets
-#### Add a scheduled tweet
+### Schedule Tweets
+#### Add a Scheduled Tweet
 Use either `--on`, `--at` or `--in` to specify the time. Please note that these are aliases.
 ```bash
 twitter schedule new --body "Ship update at 5:06pm" --at "17:06"
@@ -287,7 +285,7 @@ twitter schedule new --body "Ship update on Tuesday" --on "Tuesday"
 twitter schedule new --body "Ship update in 30 minutes" --in "30 minutes"
 ```
 
-#### List scheduled tweets
+#### List Scheduled Tweets
 ```bash
 twitter schedule list
 twitter schedule list --filter failed
@@ -298,7 +296,7 @@ If no rows match your filter, the CLI prints:
 No scheduled tweets were found.
 ```
 
-#### Run pending scheduled tweets
+#### Run Pending Scheduled Tweets
 ```bash
 twitter schedule run
 ```
@@ -307,7 +305,7 @@ If none are due, the CLI prints:
 No pending scheduled tweets to run.
 ```
 
-#### Pair with your OS scheduler
+#### Pair with Your OS Scheduler
 `schedule run` is intended to be executed regularly by your OS scheduler.
 
 Run scheduler jobs as the same user who ran `twitter config --init`.
@@ -325,7 +323,7 @@ crontab -e
 ```
 If your binary is not in `/usr/local/bin/twitter`, replace that path with the output of `command -v twitter`.
 
-macOS (launchd):
+macOS (launch):
 ```xml
 <!-- ~/Library/LaunchAgents/com.twitter.schedule.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
@@ -361,7 +359,7 @@ schtasks /Create /SC MINUTE /MO 1 /TN "TwitterScheduleRunner" /TR "\"C:\Users\<y
 ```
 If your binary is not in `C:\Users\<you>\bin\twitter.exe`, replace that path with the output of `where twitter`.
 
-#### Clear scheduled tweets
+#### Clear Scheduled Tweets
 ```bash
 twitter schedule clear
 ```
@@ -371,61 +369,61 @@ Cleared 3 scheduled tweets.
 ```
 
 ### Lists
-#### Show a list by id
+#### Show a List by Id
 ```bash
 twitter lists by-id --list-id 1234567890
 ```
 
-#### Create a list
+#### Create a List
 ```bash
 twitter lists create --name "CLI builders"
 twitter lists create --name "CLI builders" --description "People building CLI tools"
 twitter lists create --name "Private list" --private true
 ```
 
-#### Show the lists you own
+#### Show the Lists You Own
 User-scoped list commands use the current authenticated user automatically.
 ```bash
 twitter lists owned
 twitter lists owned --max-results 25
 ```
 
-#### Delete a list
+#### Delete a List
 ```bash
 twitter lists delete --list-id 1234567890
 ```
 
-#### Update a list
+#### Update a List
 ```bash
 twitter lists update --list-id 1234567890 --name "Updated name"
 twitter lists update --list-id 1234567890 --description "Updated description"
 twitter lists update --list-id 1234567890 --private true
 ```
 
-#### Show the members of a list
+#### Show the Members of a List
 ```bash
 twitter lists members --list-id 1234567890
 twitter lists members --list-id 1234567890 --max-results 25
 ```
 
-#### Add a user to a list
+#### Add a User to a List
 User-scoped list commands use the current authenticated user automatically.
 ```bash
 twitter lists add-member --list-id 1234567890 --user-id 987654321
 ```
 
-#### Show the tweets in a list
+#### Show the Tweets in a List
 ```bash
 twitter lists tweets --list-id 1234567890
 twitter lists tweets --list-id 1234567890 --max-results 25
 ```
 
-#### Remove yourself from a list
+#### Remove Yourself from a List
 User-scoped list commands use the current authenticated user automatically.
 ```bash
 twitter lists remove-member --list-id 1234567890
 ```
-#### Show the lists you belong to
+#### Show the Lists You Belong To
 The CLI resolves the current authenticated user automatically for user-scoped list endpoints.
 ```bash
 twitter lists memberships
@@ -433,85 +431,85 @@ twitter lists memberships --max-results 25
 ```
 
 ### Retweets
-#### Show who retweeted a tweet
+#### Show Who Retweeted a Tweet
 ```bash
 twitter retweets by --tweet-id 1234567890
 twitter retweets by --tweet-id 1234567890 --max-results 25
 ```
 
-#### Retweet a tweet
+#### Retweet a Tweet
 User-scoped retweet commands use the current authenticated user automatically.
 ```bash
 twitter retweets create --tweet-id 1234567890
 ```
 
-#### Remove your retweet
+#### Remove Your Retweet
 ```bash
 twitter retweets delete --tweet-id 1234567890
 ```
 
 ### DMs
-#### Show DM events for a conversation
+#### Show DM Events for a Conversation
 ```bash
 twitter dms conversation-events --conversation-id 1234567890-987654321
 twitter dms conversation-events --conversation-id 1234567890-987654321 --max-results 25
 ```
 
-#### Show your DM events
+#### Show Your DM Events
 ```bash
 twitter dms events
 twitter dms events --max-results 25
 ```
 
-#### Show DM events with a participant
+#### Show DM Events with a Participant
 ```bash
 twitter dms with --participant-id 123456
 twitter dms with --participant-id 123456 --max-results 25
 ```
 
-#### Create a DM conversation
+#### Create a DM Conversation
 ```bash
 twitter dms create --participant-ids 123456,987654 --text "hello from the CLI"
 ```
 
-#### Send a message by participant id
+#### Send a Message by Participant Id
 ```bash
 twitter dms send-with --participant-id 123456 --text "hello from the CLI"
 ```
 
-#### Send a message to an existing conversation
+#### Send a Message to an Existing Conversation
 ```bash
 twitter dms send --conversation-id 1234567890-987654321 --text "hello from the CLI"
 ```
 
 ### Mutes
-#### Mute a user
+#### Mute a User
 User-scoped mute commands use the current authenticated user automatically.
 ```bash
 twitter mutes create --target-user-id 1234567890
 ```
 
-#### Show muted users
+#### Show Muted Users
 User-scoped mute commands use the current authenticated user automatically.
 ```bash
 twitter mutes list
 twitter mutes list --max-results 25
 ```
 
-#### Unmute a user
+#### Unmute a User
 User-scoped mute commands use the current authenticated user automatically.
 ```bash
 twitter mutes delete --target-user-id 1234567890
 ```
 
 ### Blocks
-#### Block a user
+#### Block a User
 User-scoped block commands use the current authenticated user automatically.
 ```bash
 twitter blocks create --target-user-id 1234567890
 ```
 
-#### Show blocked users
+#### Show Blocked Users
 User-scoped block commands use the current authenticated user automatically.
 ```bash
 twitter blocks list
@@ -519,7 +517,7 @@ twitter blocks list --max-results 25
 ```
 `twitter blocks list` uses OAuth 2.0 (Authorization Code + PKCE) and reuses cached tokens after first authorization.
 
-#### Unblock a user
+#### Unblock a User
 User-scoped block commands use the current authenticated user automatically.
 ```bash
 twitter blocks delete --target-user-id 1234567890
@@ -531,25 +529,25 @@ Fetch your reverse-chronological home timeline.
 twitter timeline reverse
 ```
 
-### Tweet lookup
+### Tweet Lookup
 Fetch a specific tweet by id.
 ```bash
 twitter tweets by-id 2006409743426818416
 ```
 
-### User tweets
+### User Tweets
 Fetch tweets from a user by id.
 ```bash
 twitter tweets user --id 2244994945
 ```
 
-### Recent tweet search
+### Recent Tweet Search
 Search recent tweets by query.
 ```bash
 twitter tweets recent --query "rustlang"
 ```
 
-### Full-archive tweet search
+### Full-Archive Tweet Search
 Search all tweets by query.
 ```bash
 twitter tweets all --query "rustlang"
@@ -616,10 +614,10 @@ twitter bookmarks create --tweet-id 1234567890
 twitter bookmarks delete --tweet-id 1234567890
 ```
 
-OAuth behavior:
+OAuth behaviour:
 - `twitter bookmarks list` uses OAuth 2.0 (Authorization Code + PKCE) and stores access/refresh tokens in the local cache database.
 - `twitter blocks list` uses OAuth 2.0 (Authorization Code + PKCE) and shares the same local token cache.
-- `twitter bookmarks create`, `twitter bookmarks delete`, `twitter bookmarks folders`, and `twitter bookmarks folder` currently use OAuth 1.0a user tokens from your config.
+- `twitter bookmarks create`, `twitter bookmarks delete`, `twitter bookmarks folders`, and `twitter bookmarks folder` currently use OAuth 1.0a user tokens from your configuration.
 
 First OAuth 2.0 key exchange for `bookmarks list` or `blocks list` (on `main`, unreleased):
 1. Add `client_id` and `client_secret` to your account in `~/.config/twitter_cli/config.toml`.
@@ -650,7 +648,7 @@ twitter streams connect
 twitter streams connect --backfill-minutes 5
 ```
 
-### Current user
+### Current User
 Fetch details for the currently authenticated user. 
 ```bash
 twitter me
@@ -668,7 +666,7 @@ Tweet Id: 2006409743426818416
 Tweet body: Hello, world
 ```
 
-## Show usage
+## Show Usage
 You can show the API usage via the usage subcommand.
 ```shell
 twitter usage
