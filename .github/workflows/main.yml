@@ -6,7 +6,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -71,37 +71,26 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Install native deps via vcpkg
+      - name: Install native deps via vcpkg (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
-
           if (-not $vcpkgRoot) {
             $vcpkgRoot = "C:\vcpkg"
           }
-
           $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
-
           if (-not (Test-Path $vcpkgExe)) {
             throw "vcpkg.exe not found at $vcpkgExe"
           }
 
-          & $vcpkgExe install `
-            "sqlite3:${{ matrix.vcpkg_triplet }}" `
-            "curl:${{ matrix.vcpkg_triplet }}" `
-            "zlib:${{ matrix.vcpkg_triplet }}"
-
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
           if ($LASTEXITCODE -ne 0) {
-            throw "Failed to install native dependencies."
+            throw "Failed to install sqlite3/curl with vcpkg."
           }
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
-
-          # curl-sys doesn't always auto-link zlib/iphlpapi when statically
-          # linking curl via vcpkg — add them explicitly.
-          "RUSTFLAGS=-C link-arg=/DEFAULTLIB:zlib.lib -C link-arg=/DEFAULTLIB:iphlpapi.lib" >> $env:GITHUB_ENV
 
       - name: Build release
         shell: bash
@@ -114,14 +103,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           bin="target/${{ matrix.target }}/release/${BINARY_NAME}"
-
-          test -f "$bin" || {
-            echo "Binary missing: $bin"
-            exit 1
-          }
-
+          test -f "$bin" || { echo "Binary missing: $bin"; exit 1; }
           "$bin" --version
 
       - name: Smoke test binary (Windows)
@@ -129,11 +112,9 @@ jobs:
         shell: pwsh
         run: |
           $bin = "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe"
-
           if (-not (Test-Path $bin)) {
             throw "Binary missing: $bin"
           }
-
           & $bin --version
 
       - name: Package
@@ -141,29 +122,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           TARGET_DIR="target/${{ matrix.target }}/release"
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
+           BIN="${TARGET_DIR}/${BINARY_NAME}.exe"
           else
-            BIN="${TARGET_DIR}/${BINARY_NAME}"
+          BIN="${TARGET_DIR}/${BINARY_NAME}"
           fi
 
-          test -f "$BIN" || {
-            echo "Binary missing: $BIN"
-            exit 1
-          }
+          test -f "$BIN" || { echo "Binary missing: $BIN"; exit 1; }
 
           ARCHIVE="${BINARY_NAME}-${{ matrix.name }}.${{ matrix.archive_ext }}"
           STAGE="$(mktemp -d)"
-
           install -m 0755 "$BIN" "$STAGE/$(basename "$BIN")"
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            7z a "$ARCHIVE" "$STAGE"/*
+           7z a "$ARCHIVE" "$STAGE"/*
           else
-            tar -C "$STAGE" -czf "$ARCHIVE" .
+          tar -C "$STAGE" -czf "$ARCHIVE" .
           fi
 
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
@@ -180,7 +156,6 @@ jobs:
     name: Upload release assets
     needs: build
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -191,14 +166,12 @@ jobs:
           path: artifacts
 
       - name: List artifacts
-        run: |
-          find artifacts -type f -maxdepth 2 \
-            \( -name "*.tar.gz" -o -name "*.zip" \)
+        run: find artifacts -type f -maxdepth 2 \( -name "*.tar.gz" -o -name "*.zip" \)
 
       - name: Upload assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             artifacts/**/*.tar.gz
             artifacts/**/*.zip
