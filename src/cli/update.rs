@@ -26,7 +26,7 @@ pub fn run() {
     let temp_dir = env::temp_dir();
 
     let os_name = match os {
-        "macos" => "darwin",
+        "macos" => "apple-darwin",
         "linux" => "linux",
         "windows" => "windows",
         other_os => {
@@ -54,7 +54,7 @@ pub fn run() {
         "twitter"
     };
 
-    let filename = format!("twitter-{}-{}.{}", os_name, arch_name, ext);
+    let filename = format!("twitter-{}-{}.{}", arch_name, os_name, ext);
     let work_dir = temp_dir.join(format!("twitter-update-{}", unique_suffix()));
 
     if let Err(err) = std::fs::create_dir_all(&work_dir) {
