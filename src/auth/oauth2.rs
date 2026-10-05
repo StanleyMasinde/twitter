@@ -57,20 +57,6 @@ fn has_required_scopes(scopes: Option<&str>) -> bool {
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{SCOPES, has_required_scopes};
-
-    #[test]
-    fn legacy_or_narrow_tokens_need_new_consent() {
-        assert!(!has_required_scopes(None));
-        assert!(!has_required_scopes(Some(
-            "bookmark.read tweet.read users.read block.read offline.access"
-        )));
-        assert!(has_required_scopes(Some(&SCOPES.join(" "))));
-    }
-}
-
 impl Default for TokenManager {
     fn default() -> Self {
         Self::new()
@@ -263,5 +249,19 @@ impl TokenManager {
         Timestamp::from_second(expiry_seconds_since_epoch)
             .unwrap()
             .to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SCOPES, has_required_scopes};
+
+    #[test]
+    fn legacy_or_narrow_tokens_need_new_consent() {
+        assert!(!has_required_scopes(None));
+        assert!(!has_required_scopes(Some(
+            "bookmark.read tweet.read users.read block.read offline.access"
+        )));
+        assert!(has_required_scopes(Some(&SCOPES.join(" "))));
     }
 }
