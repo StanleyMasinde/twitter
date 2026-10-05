@@ -5,7 +5,7 @@ use std::{
 
 use serde::Deserialize;
 
-use crate::utils::oauth_post_header;
+use crate::utils::user_auth_header;
 
 #[derive(Debug, Deserialize)]
 struct MediaUploadResponse {
@@ -26,7 +26,7 @@ pub fn upload(path: PathBuf) -> Result<String, UploadMediaError> {
     let upload_url = "https://api.x.com/2/media/upload";
     println!("> Uploading image to Twitter.");
 
-    let auth_header = oauth_post_header(upload_url, &());
+    let auth_header = user_auth_header();
     let file_kind = infer::get_from_path(&path);
 
     let media_type = match file_kind {

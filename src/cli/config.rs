@@ -81,13 +81,13 @@ pub fn init() {
     }
 
     let account = Account {
-        consumer_key: "your_consumer_key".to_string(),
-        consumer_secret: "your_consumer_secret".to_string(),
-        access_token: "your_access_token".to_string(),
-        access_secret: "your_access_secret".to_string(),
+        consumer_key: String::new(),
+        consumer_secret: String::new(),
+        access_token: String::new(),
+        access_secret: String::new(),
         bearer_token: "your_bearer_token".to_string(),
         client_id: "your_oauth2_client_id".to_string(),
-        client_secret: "your_oauth2.client_secret".to_string(),
+        client_secret: "your_oauth2_client_secret".to_string(),
     };
 
     let config = Config {

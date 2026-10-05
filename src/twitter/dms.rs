@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::Response,
-    utils::{get_current_user_id, oauth_get_header, oauth_post_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -212,7 +212,7 @@ impl SendConversationMessage {
         &self,
     ) -> Result<Response<SendConversationMessageResponse>, SendConversationMessageError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&SendConversationMessageBody {
             text: self.text.as_str(),
         })
@@ -271,7 +271,7 @@ impl ConversationDmEvents {
     ) -> Result<Response<ConversationDmEventsResponse>, ConversationDmEventsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -320,7 +320,7 @@ impl UserDmEvents {
     pub fn fetch(&self) -> Result<Response<UserDmEventsResponse>, UserDmEventsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -371,7 +371,7 @@ impl ParticipantDmEvents {
     pub fn fetch(&self) -> Result<Response<ParticipantDmEventsResponse>, ParticipantDmEventsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -418,7 +418,7 @@ impl SendWithParticipantMessage {
         &self,
     ) -> Result<Response<SendWithParticipantMessageResponse>, SendWithParticipantMessageError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&SendConversationMessageBody {
             text: self.text.as_str(),
         })
@@ -468,7 +468,7 @@ impl CreateConversation {
 
     pub fn send(&self) -> Result<Response<CreateConversationResponse>, CreateConversationError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url, &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateConversationBody {
             conversation_type: "GroupDM",
             participant_ids: self.participant_ids.as_slice(),

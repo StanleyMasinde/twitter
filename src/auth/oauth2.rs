@@ -24,6 +24,51 @@ struct TokenRecord {
     access_token: String,
     refresh_token: String,
     expires_at: String,
+    scopes: Option<String>,
+}
+
+const SCOPES: &[&str] = &[
+    "bookmark.read",
+    "bookmark.write",
+    "tweet.read",
+    "tweet.write",
+    "users.read",
+    "block.read",
+    "block.write",
+    "mute.read",
+    "mute.write",
+    "like.read",
+    "like.write",
+    "follows.read",
+    "follows.write",
+    "list.read",
+    "list.write",
+    "dm.read",
+    "dm.write",
+    "media.write",
+    "offline.access",
+];
+
+fn has_required_scopes(scopes: Option<&str>) -> bool {
+    scopes.is_some_and(|scopes| {
+        SCOPES
+            .iter()
+            .all(|scope| scopes.split_whitespace().any(|s| s == *scope))
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SCOPES, has_required_scopes};
+
+    #[test]
+    fn legacy_or_narrow_tokens_need_new_consent() {
+        assert!(!has_required_scopes(None));
+        assert!(!has_required_scopes(Some(
+            "bookmark.read tweet.read users.read block.read offline.access"
+        )));
+        assert!(has_required_scopes(Some(&SCOPES.join(" "))));
+    }
 }
 
 impl Default for TokenManager {
@@ -36,6 +81,17 @@ impl TokenManager {
     pub fn new() -> Self {
         let db = Database::new(TOKEN_TABLE_NAME);
         let connection = db.open_connection();
+        let has_scopes = connection
+            .prepare("PRAGMA table_info(access_tokens)")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(1))
+            .unwrap()
+            .any(|column| column.unwrap() == "scopes");
+        if !has_scopes {
+            connection
+                .execute("ALTER TABLE access_tokens ADD COLUMN scopes TEXT", [])
+                .unwrap();
+        }
         Self { connection }
     }
 
@@ -44,7 +100,7 @@ impl TokenManager {
         let account_id: u32 = cfg.current_account as u32;
         let current_account = cfg.current_account();
         let exists_query = format!(
-            "SELECT * from {} WHERE account_id = ? LIMIT 1",
+            "SELECT access_token, refresh_token, expires_at, scopes FROM {} WHERE account_id = ? LIMIT 1",
             TOKEN_TABLE_NAME
         );
         let client = BasicClient::new(ClientId::new(current_account.client_id.clone()))
@@ -57,13 +113,16 @@ impl TokenManager {
             .connection
             .query_one(&exists_query, params![account_id], |row| {
                 Ok(TokenRecord {
-                    access_token: row.get(2).unwrap(),
-                    refresh_token: row.get(3).unwrap(),
-                    expires_at: row.get(5).unwrap(),
+                    access_token: row.get(0).unwrap(),
+                    refresh_token: row.get(1).unwrap(),
+                    expires_at: row.get(2).unwrap(),
+                    scopes: row.get(3).unwrap(),
                 })
             });
 
-        if let Ok(current_token) = token_exists {
+        if let Ok(current_token) = token_exists
+            && has_required_scopes(current_token.scopes.as_deref())
+        {
             // Check if the token has expired
             let expiry_time: Timestamp = current_token.expires_at.parse().unwrap();
             let now = Timestamp::now();
@@ -107,15 +166,14 @@ impl TokenManager {
 
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-        let (auth_url, csrf_token) = client
+        let auth_request = client
             .authorize_url(CsrfToken::new_random)
-            .add_scope(Scope::new("bookmark.read".to_string()))
-            .add_scope(Scope::new("bookmark.write".to_string()))
-            .add_scope(Scope::new("tweet.read".to_string()))
-            .add_scope(Scope::new("users.read".to_string()))
-            .add_scope(Scope::new("block.read".to_string()))
-            .add_scope(Scope::new("offline.access".to_string()))
-            .set_pkce_challenge(pkce_challenge)
+            .set_pkce_challenge(pkce_challenge);
+        let (auth_url, csrf_token) = SCOPES
+            .iter()
+            .fold(auth_request, |request, scope| {
+                request.add_scope(Scope::new((*scope).to_string()))
+            })
             .url();
 
         println!("Open this URL in a browser:");
@@ -161,8 +219,13 @@ impl TokenManager {
         let insert_query = format!(
             "
             INSERT INTO {TOKEN_TABLE_NAME}
-            (account_id, access_token, refresh_token, expires_at)
-            VALUES (?, ?, ?, ?)
+            (account_id, access_token, refresh_token, expires_at, scopes)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(account_id) DO UPDATE SET
+                access_token = excluded.access_token,
+                refresh_token = excluded.refresh_token,
+                expires_at = excluded.expires_at,
+                scopes = excluded.scopes
             "
         );
 
@@ -174,6 +237,7 @@ impl TokenManager {
                 token.access_token().secret(),
                 token.refresh_token().unwrap().secret(),
                 token_expiry_time,
+                SCOPES.join(" "),
             ],
         );
 

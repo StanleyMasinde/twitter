@@ -167,26 +167,18 @@ current_account = 0
 
 # Account 1
 [[accounts]]
-consumer_key = "your_consumer_key"
-consumer_secret = "your_consumer_secret"
-access_token = "your_access_token"
-access_secret = "your_access_secret"
 bearer_token = "your_bearer_token"
 client_id = "your_oauth2_client_id"
 client_secret = "your_oauth2_client_secret"
 
 # Account 2
 [[accounts]]
-consumer_key = "your_consumer_key"
-consumer_secret = "your_consumer_secret"
-access_token = "your_access_token"
-access_secret = "your_access_secret"
 bearer_token = "your_bearer_token"
 client_id = "your_oauth2_client_id"
 client_secret = "your_oauth2_client_secret"
 ```
 
-On `main` (not yet released), `client_id` and `client_secret` are required configuration fields for each account. Keep them populated even if you are not using OAuth 2.0-backed commands yet.
+Set `client_id` and `client_secret` for each account. Commands that use app-only authentication also need `bearer_token`. Existing OAuth 1.0a keys in older configuration files are accepted but no longer used.
 
 ### Manual Configuration
 Create configuration file at `~/.config/twitter_cli/config.toml` with the format above. Keep this file private since it contains API secrets.
@@ -202,10 +194,7 @@ If you face a 403 error when tweeting:
 
 1. In the Twitter Developer Portal, go to your App → **User authentication settings**
 2. Set **App permissions** to **Read and write**
-3. Save changes, then regenerate your Access Token & Secret
-4. Update your configuration with the new values
-
-> **NB:** Regenerate tokens after updating permissions, otherwise old tokens remain read-only.
+3. Save changes, then run the command again and authorize the requested scopes if prompted.
 
 ## Service Unavailable (503) When Posting
 If media upload works but `POST /2/tweets` fails with:
@@ -216,8 +205,8 @@ If media upload works but `POST /2/tweets` fails with:
 
 check the following:
 
-1. In the X Developer Portal (`developer.x.com` / `console.x.com`), confirm your app has active billing and available credits.
-2. Ensure your app permissions are still **Read and write**, then regenerate Access Token and Secret after permission changes.
+1. In the Twitter Developer Portal (`developer.x.com` / `console.x.com`), confirm your app has active billing and available credits.
+2. Ensure your app permissions are still **Read and write**. If they changed, clear the cached OAuth 2.0 token for this account and authorize again.
 3. Retry a minimal text-only tweet first:
    ```bash
    twitter tweet --body "test"
@@ -226,7 +215,20 @@ check the following:
    ```bash
    twitter tweet --body "test with image" --image ~/path/to/image.png
    ```
-5. Check your X API usage dashboard and logs to confirm write calls are not blocked by billing, limits, or temporary platform incidents.
+5. Check your Twitter API usage dashboard and logs to confirm write calls are not blocked by billing, limits, or temporary platform incidents.
+
+## Twitter API access levels
+
+These commands use API capabilities that require Enterprise access:
+
+| Command or input | Enterprise requirement |
+| --- | --- |
+| `twitter blocks create`, `twitter blocks delete` | Blocking and unblocking require Enterprise. [`blocks list` is available with pay-per-use access](https://docs.x.com/x-api/users/blocks/introduction). |
+| `twitter streams rules add` with `embedding:` or `embedding_threshold:` in `--value` | Semantic matching requires Enterprise with the Embedding tier. [Twitter API operator reference](https://docs.x.com/x-api/posts/filtered-stream/integrate/operators). |
+| `twitter tweets recent`, `all`, `count-recent`, or `count-all` with longer queries | The endpoints support pay-per-use access, but longer query limits require Enterprise. Some advanced count-query operators also require Enterprise. [Search access](https://docs.x.com/x-api/posts/search/introduction), [counts access](https://docs.x.com/x-api/posts/counts/introduction), [query operators](https://docs.x.com/x-api/posts/counts/integrate/build-a-query). |
+| Filtered stream rules or connections above pay-per-use limits | Enterprise provides higher rule and connection limits. [Twitter API stream limits](https://docs.x.com/x-api/posts/filtered-stream/introduction). |
+
+The reviewed endpoint docs do not mark other CLI calls as Enterprise-only. They can still require suitable app access, billing, OAuth scopes, and available usage.
 
 ## Usage
 
@@ -503,6 +505,9 @@ twitter mutes delete --target-user-id 1234567890
 ```
 
 ### Blocks
+
+Twitter makes `blocks list` available with pay-per-use access, but [`blocks create` and `blocks delete` require Enterprise access](https://docs.x.com/x-api/users/blocks/introduction). If `blocks create` returns `client-not-enrolled` or `Client Forbidden`, check that your OAuth 2.0 app is attached to a Project with the required access. Creating a Project alone does not enable blocking on a self-serve plan. After switching to an eligible app, authorize it again; OAuth 2.0 tokens are cached by `current_account` index, so use a new account entry or clear that account's cached token.
+
 #### Block a User
 User-scoped block commands use the current authenticated user automatically.
 ```bash
@@ -614,15 +619,12 @@ twitter bookmarks create --tweet-id 1234567890
 twitter bookmarks delete --tweet-id 1234567890
 ```
 
-OAuth behaviour:
-- `twitter bookmarks list` uses OAuth 2.0 (Authorization Code + PKCE) and stores access/refresh tokens in the local cache database.
-- `twitter blocks list` uses OAuth 2.0 (Authorization Code + PKCE) and shares the same local token cache.
-- `twitter bookmarks create`, `twitter bookmarks delete`, `twitter bookmarks folders`, and `twitter bookmarks folder` currently use OAuth 1.0a user tokens from your configuration.
+User-context v2 commands use OAuth 2.0 (Authorization Code + PKCE) and share cached access and refresh tokens. App-only commands use the configured `bearer_token`. After upgrading, the CLI asks you to authorize the expanded scopes once; cached tokens issued with the earlier scope set cannot access the added commands.
 
-First OAuth 2.0 key exchange for `bookmarks list` or `blocks list` (on `main`, unreleased):
+First OAuth 2.0 authorization:
 1. Add `client_id` and `client_secret` to your account in `~/.config/twitter_cli/config.toml`.
-2. In the X/Twitter Developer Dashboard (App settings), set the callback/redirect URL to `http://127.0.0.1:3000`.
-3. Run `twitter bookmarks list` or `twitter blocks list`.
+2. In the Twitter Developer Dashboard (App settings), set the callback/redirect URL to `http://127.0.0.1:3000`.
+3. Run a user-context command, such as `twitter blocks list`.
 4. Open the printed authorization URL in your browser.
 5. After consent, the browser redirect may show an error (for example, server not found). That is expected because no local dev server is required (works for VPS/embedded environments too).
 6. Copy the full callback URL from the browser address bar, paste it in the CLI prompt, then press Enter.

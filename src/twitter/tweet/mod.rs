@@ -6,7 +6,7 @@ pub use crate::{
             TweetBody, TwitterApi,
         },
     },
-    utils::oauth_post_header,
+    utils::user_auth_header,
 };
 
 pub mod types;
@@ -36,7 +36,7 @@ impl<'t> Tweet<'t> {
 
     fn send(&mut self, index: Option<usize>) -> Result<TweetCreateResponse, CreateTweetError> {
         let url = "https://api.twitter.com/2/tweets";
-        let auth_header = oauth_post_header(url, &());
+        let auth_header = user_auth_header();
         let media = self.payload.media.clone();
         let mut reply = None;
         if self.previous_tweet.is_some() {
@@ -113,7 +113,7 @@ impl DeleteTweet {
 
     pub fn send(&self) -> Result<Response<DeleteTweetResponse>, DeleteTweetErr> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()

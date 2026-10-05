@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
-    utils::{bearer_auth_header, get_current_user_id, oauth_post_header, oauth_put_header},
+    utils::{bearer_auth_header, get_current_user_id, user_auth_header},
 };
 
 const LIST_FIELDS: &str = "id,name,owner_id,private,description,follower_count,member_count";
@@ -478,7 +478,7 @@ impl CreateList {
 
     pub fn send(&self) -> Result<Response<CreateListResponse>, CreateListError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url, &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateListBody {
             name: self.name.as_str(),
             description: self.description.as_deref(),
@@ -528,7 +528,7 @@ impl CreateListMember {
 
     pub fn send(&self) -> Result<Response<CreateListMemberResponse>, CreateListMemberError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateListMemberBody {
             user_id: self.user_id.as_str(),
         })
@@ -684,7 +684,7 @@ impl DeleteListMember {
 
     pub fn send(&self) -> Result<Response<DeleteListMemberResponse>, DeleteListMemberError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()
@@ -746,7 +746,7 @@ impl UpdateList {
 
     pub fn send(&self) -> Result<Response<UpdateListResponse>, UpdateListError> {
         let url = self.url();
-        let auth_header = oauth_put_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&UpdateListBody {
             name: self.name.as_deref(),
             description: self.description.as_deref(),
@@ -795,7 +795,7 @@ impl DeleteList {
 
     pub fn send(&self) -> Result<Response<DeleteListResponse>, DeleteListError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()

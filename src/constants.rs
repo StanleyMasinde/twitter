@@ -14,6 +14,7 @@ pub const CREATE_TOKENS_TABLE: &str = r#"
                 token_type TEXT NOT NULL DEFAULT 'Bearer',
 
                 expires_at DATETIME,
+                scopes TEXT,
 
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

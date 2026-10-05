@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::Response,
-    utils::{get_current_user_id, oauth_get_header, oauth_post_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -109,7 +109,7 @@ impl MutedUsers {
     pub fn fetch(&self) -> Result<Response<MutedUsersResponse>, MutedUsersError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -153,7 +153,7 @@ impl CreateMute {
 
     pub fn send(&self) -> Result<Response<CreateMuteResponse>, CreateMuteError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateMuteBody {
             target_user_id: self.target_user_id.as_str(),
         })
@@ -206,7 +206,7 @@ impl DeleteMute {
 
     pub fn send(&self) -> Result<Response<DeleteMuteResponse>, DeleteMuteError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()
