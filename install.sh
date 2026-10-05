@@ -11,20 +11,20 @@ detect_platform() {
     
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "$os" in
-        linux*) os="linux" ;;
-        darwin*) os="darwin" ;;
-        mingw*|msys*|cygwin*) os="windows" ;;
+        linux*) os="unknown-linux-gnu" ;;
+        darwin*) os="apple-darwin" ;;
+        mingw*|msys*|cygwin*) os="pc-windows-msvc" ;;
         *) echo "Error: Unsupported OS: $os" >&2; exit 1 ;;
     esac
     
     arch=$(uname -m)
     case "$arch" in
         x86_64|amd64) arch="x86_64" ;;
-        aarch64|arm64) arch="arm" ;;
+        aarch64|arm64) arch="aarch64" ;;
         *) echo "Error: Unsupported architecture: $arch" >&2; exit 1 ;;
     esac
     
-    echo "${os}-${arch}"
+    echo "${arch}-${os}"
 }
 
 get_release_data() {
@@ -109,7 +109,7 @@ install_twitter() {
     
     local ext
     case "$platform" in
-        windows-*) ext="zip" ;;
+        *-pc-windows-msvc) ext="zip" ;;
         *) ext="tar.gz" ;;
     esac
     
@@ -271,9 +271,9 @@ Examples:
   curl -fsSL <installer-url> | TWITTER_INSTALL=~/.local/bin sh
 
 Supported Platforms:
-  - Linux (x86_64, aarch64, arm)
+  - Linux (x86_64, aarch64)
   - macOS/Darwin (x86_64, aarch64)
-  - Windows (x86_64, arm)
+  - Windows (x86_64, aarch64; when available in a release)
 
 Security:
   - Downloads are verified using SHA256 checksums from GitHub API

@@ -46,8 +46,8 @@ function Get-Platform {
     }
 
     switch ($arch) {
-        "X64" { return "windows-x86_64" }
-        "Arm64" { return "windows-aarch64" }
+        "X64" { return "x86_64-pc-windows-msvc" }
+        "Arm64" { return "aarch64-pc-windows-msvc" }
         default { throw "Unsupported architecture: $arch" }
     }
 }
