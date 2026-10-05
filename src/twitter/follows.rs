@@ -1,6 +1,6 @@
 use crate::{
     twitter::{Response, UserData},
-    utils::{get_current_user_id, oauth_get_header, oauth_post_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 use serde::Deserialize;
 use serde::Serialize;
@@ -152,11 +152,7 @@ impl Following {
         let url = self.url();
         let max_results = self.max_results.to_string();
         let user_fields = "name,username".to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -225,11 +221,7 @@ impl Followers {
         let url = self.url();
         let max_results = self.max_results.to_string();
         let user_fields = "name,username".to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -273,7 +265,7 @@ impl CreateFollow {
 
     pub fn send(&self) -> Result<Response<CreateFollowResponse>, CreateFollowError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateFollowBody {
             target_user_id: self.target_user_id.as_str(),
         })
@@ -326,7 +318,7 @@ impl DeleteFollow {
 
     pub fn send(&self) -> Result<Response<DeleteFollowResponse>, DeleteFollowError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()

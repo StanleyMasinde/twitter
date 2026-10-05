@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::oauth2::TokenManager,
     twitter::Response,
-    utils::{get_current_user_id, oauth_post_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -157,7 +157,7 @@ impl CreateBlock {
 
     pub fn send(&self) -> Result<Response<CreateBlockResponse>, CreateBlockError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateBlockBody {
             target_user_id: self.target_user_id.as_str(),
         })
@@ -210,7 +210,7 @@ impl DeleteBlock {
 
     pub fn send(&self) -> Result<Response<DeleteBlockResponse>, DeleteBlockError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()

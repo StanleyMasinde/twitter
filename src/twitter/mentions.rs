@@ -1,8 +1,6 @@
-use std::fmt::Display;
-
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
-    utils::oauth_get_header,
+    utils::user_auth_header,
 };
 use serde::Deserialize;
 
@@ -59,13 +57,7 @@ impl Mentions {
         let tweet_fields = TWEET_FIELDS.to_string();
         let user_fields = USER_FIELDS.to_string();
         let expansions = AUTHOR_EXPANSION.to_string();
-        let auth_params = oauth::ParameterList::new([
-            ("max_results", &max_results as &dyn Display),
-            ("tweet.fields", &tweet_fields as &dyn Display),
-            ("user.fields", &user_fields as &dyn Display),
-            ("expansions", &expansions as &dyn Display),
-        ]);
-        let auth_header = oauth_get_header(url.as_str(), &auth_params);
+        let auth_header = user_auth_header();
         let max_results_query = max_results.to_string();
 
         let response = curl_rest::Client::default()

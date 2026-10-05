@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::Response,
-    utils::{bearer_auth_header, get_current_user_id, oauth_post_header},
+    utils::{bearer_auth_header, get_current_user_id, user_auth_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -103,7 +103,7 @@ impl CreateRetweet {
 
     pub fn send(&self) -> Result<Response<CreateRetweetResponse>, CreateRetweetError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
         let body = serde_json::to_string(&CreateRetweetBody {
             tweet_id: self.tweet_id.as_str(),
         })
@@ -204,7 +204,7 @@ impl DeleteRetweet {
 
     pub fn send(&self) -> Result<Response<DeleteRetweetResponse>, DeleteRetweetError> {
         let url = self.url();
-        let auth_header = oauth_post_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .delete()

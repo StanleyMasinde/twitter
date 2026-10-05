@@ -6,10 +6,15 @@ use crate::utils::gracefully_exit;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub consumer_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub consumer_secret: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_secret: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub bearer_token: String,
     // oauth2.0
     pub client_id: String,
@@ -63,12 +68,8 @@ impl Display for Config {
         let current = self.accounts.get(self.current_account).unwrap();
         write!(
             f,
-            "Current Account: {} \nConsumer Key: {}\nConsumer Secret: {}\nAccess Token: {}\nAccess Token Secret: {}",
-            self.current_account,
-            current.consumer_key,
-            current.consumer_secret,
-            current.access_token,
-            current.access_secret
+            "Current Account: {}\nOAuth 2.0 Client ID: {}",
+            self.current_account, current.client_id
         )
     }
 }
@@ -91,6 +92,15 @@ fn test_load_config() {
     let test_config = Config::from_str(s).unwrap();
 
     assert_eq!(test_config.current_account, 0);
+}
+
+#[test]
+fn oauth2_config_does_not_require_oauth1_keys() {
+    let config = Config::from_str(
+        "current_account = 0\n[[accounts]]\nclient_id = 'client'\nclient_secret = 'secret'",
+    )
+    .unwrap();
+    assert!(config.accounts[0].consumer_key.is_empty());
 }
 
 #[test]

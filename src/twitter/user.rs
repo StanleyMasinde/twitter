@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::Deserialize;
 
-use crate::{twitter::Response, utils::oauth_get_header};
+use crate::{twitter::Response, utils::user_auth_header};
 
 #[derive(Debug, Deserialize)]
 pub struct UserData {
@@ -114,7 +114,7 @@ impl UserLookup {
 
     pub fn fetch(&self) -> Result<Response<UserLookupResponse>, UserLookupError> {
         let url = self.url();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -153,8 +153,7 @@ impl UsersLookup {
     pub fn fetch(&self) -> Result<Response<UsersLookupResponse>, UsersLookupError> {
         let url = self.url();
         let ids = self.user_ids.join(",");
-        let auth_params = oauth::ParameterList::new([("ids", &ids as &dyn Display)]);
-        let auth_header = oauth_get_header(url, &auth_params);
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -195,7 +194,7 @@ impl UserLookupByUsername {
 
     pub fn fetch(&self) -> Result<Response<UserLookupResponse>, UserLookupError> {
         let url = self.url();
-        let auth_header = oauth_get_header(url.as_str(), &());
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -234,8 +233,7 @@ impl UsersLookupByUsernames {
     pub fn fetch(&self) -> Result<Response<UsersLookupResponse>, UsersLookupError> {
         let url = self.url();
         let usernames = self.usernames.join(",");
-        let auth_params = oauth::ParameterList::new([("usernames", &usernames as &dyn Display)]);
-        let auth_header = oauth_get_header(url, &auth_params);
+        let auth_header = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -265,7 +263,7 @@ impl UsersLookupByUsernames {
 
 pub fn me() -> Result<Response<CurrentUserResponse>, CurrentUserError> {
     let url = "https://api.x.com/2/users/me";
-    let auth_header = oauth_get_header(url, &());
+    let auth_header = user_auth_header();
 
     let response = curl_rest::Client::default()
         .get()
