@@ -12,7 +12,14 @@ On macOS or Linux, install the latest release:
 curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh
 ```
 
-For Windows and other installation options, see the [installation guide](https://twitter.stanleymasinde.com).
+On Windows, install the latest release in PowerShell 7 or later:
+
+```powershell
+irm https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1 |
+    iex
+```
+
+For other installation options, see the [installation guide](https://twitter.stanleymasinde.com).
 
 Create a [Twitter developer app](https://developer.twitter.com), then configure the CLI with its credentials:
 
