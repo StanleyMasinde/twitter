@@ -78,14 +78,16 @@ jobs:
             throw "vcpkg.exe not found at $vcpkgExe"
           }
 
-          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}" "zlib:${{ matrix.vcpkg_triplet }}"
           if ($LASTEXITCODE -ne 0) {
-            throw "Failed to install sqlite3/curl with vcpkg."
+            throw "Failed to install sqlite3/curl/zlib with vcpkg."
           }
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
           "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
+          # Static curl needs zlib and the Windows IP Helper library.
+          "RUSTFLAGS=$env:RUSTFLAGS -l static=zlib -l iphlpapi" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
