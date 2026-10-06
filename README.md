@@ -15,8 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install
 On Windows, install the latest release in PowerShell 7 or later:
 
 ```powershell
-irm https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1 |
-    iex
+irm https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1 | iex
 ```
 
 For other installation options, see the [installation guide](https://twitter.stanleymasinde.com).
