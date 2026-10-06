@@ -39,6 +39,18 @@ jobs:
             name: darwin-x86_64
             archive_ext: tar.gz
 
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x86_64
+            archive_ext: zip
+            vcpkg_triplet: x64-windows-static-md
+
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            name: windows-arm
+            archive_ext: zip
+            vcpkg_triplet: arm64-windows-static-md
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -53,11 +65,33 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      - name: Install native deps via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          if (-not (Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found at $vcpkgExe"
+          }
+
+          & $vcpkgExe install "sqlite3:${{ matrix.vcpkg_triplet }}" "curl:${{ matrix.vcpkg_triplet }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install sqlite3/curl with vcpkg."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+          "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
+
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package (unix)
-        if: matrix.os != 'windows-latest'
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
@@ -65,7 +99,7 @@ jobs:
           cd -
 
       - name: Package (windows)
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           cd target/${{ matrix.target }}/release

@@ -104,6 +104,7 @@ jobs:
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+          "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --locked
@@ -185,6 +186,7 @@ jobs:
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+          "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --release --locked --target "${{ matrix.target }}"
