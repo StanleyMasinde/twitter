@@ -87,7 +87,11 @@ jobs:
           "VCPKGRS_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
           "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
           # Static curl needs zlib and the Windows IP Helper library.
-          "RUSTFLAGS=$env:RUSTFLAGS -l static=zlib -l iphlpapi" >> $env:GITHUB_ENV
+          $nativeLibDir = Join-Path $vcpkgRoot "installed/${{ matrix.vcpkg_triplet }}/lib"
+          if (-not (Test-Path (Join-Path $nativeLibDir "zlib.lib"))) {
+            throw "Static zlib library not found in $nativeLibDir"
+          }
+          "RUSTFLAGS=$env:RUSTFLAGS -L native=$nativeLibDir -l static=zlib -l iphlpapi" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
