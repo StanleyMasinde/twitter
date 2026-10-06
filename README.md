@@ -9,13 +9,17 @@ Tweet from your terminal without opening twitter.com. This Rust CLI also support
 On macOS or Linux, install the latest release:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.sh | sh
+curl -fsSL https://twitter.stanleymasinde.com/install.sh | sh
 ```
 
 On Windows, install the latest release in PowerShell 7 or later:
 
 ```powershell
+<<<<<<< Updated upstream
 irm https://raw.githubusercontent.com/StanleyMasinde/twitter/main/install.ps1 | iex
+=======
+irm https://twitter.stanleymasinde.com/install.ps1 | iex
+>>>>>>> Stashed changes
 ```
 
 For other installation options, see the [installation guide](https://twitter.stanleymasinde.com).
