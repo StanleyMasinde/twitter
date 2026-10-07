@@ -129,7 +129,21 @@ pub fn init() {
 }
 
 pub fn validate() {
+    let config_file = utils::get_config_file();
+    let content = fs::read_to_string(&config_file).unwrap_or_else(|err| {
+        gracefully_exit(&format!(
+            "Failed to read config file {}: {err}",
+            config_file.display()
+        ));
+    });
+    if let Err(err) = toml::from_str::<Config>(&content) {
+        gracefully_exit(&format!(
+            "Invalid config file {}: {err}",
+            config_file.display()
+        ));
+    }
+
     utils::check_permissions(&utils::get_config_dir(), true);
-    utils::check_permissions(&utils::get_config_file(), false);
+    utils::check_permissions(&config_file, false);
     println!("> Validation complete. Please check for any warnings and address them.")
 }
