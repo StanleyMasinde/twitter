@@ -24,6 +24,10 @@ rusqlite = "0.40.2"
 tabled = "0.22.0"
 oauth2 = { version = "5.0.0", default-features = false, features = ['curl'] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+curl = { version = "0.4.50", features = ["static-curl", "static-ssl"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
 serial_test = "4.0.1"

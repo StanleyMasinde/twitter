@@ -141,6 +141,18 @@ jobs:
             os: ubuntu-24.04-arm
             name: linux-arm
 
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+            name: android-aarch64
+
+          - target: armv7-linux-androideabi
+            os: ubuntu-latest
+            name: android-armv7
+
+          - target: x86_64-linux-android
+            os: ubuntu-latest
+            name: android-x86_64
+
           - target: aarch64-apple-darwin
             os: macos-latest
             name: darwin-aarch64
@@ -204,5 +216,21 @@ jobs:
           }
           "RUSTFLAGS=$env:RUSTFLAGS -L native=$nativeLibDir -l static=zs -l iphlpapi" >> $env:GITHUB_ENV
 
+      - name: Install Android NDK
+        if: contains(matrix.target, 'android')
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27d
+          add-to-path: false
+
+      - name: Build Android (Termux)
+        if: contains(matrix.target, 'android')
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: bash .github/scripts/build-android.sh "${{ matrix.target }}"
+
       - name: Build
+        if: ${{ !contains(matrix.target, 'android') }}
         run: cargo build --release --locked --target "${{ matrix.target }}"
