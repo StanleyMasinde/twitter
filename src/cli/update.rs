@@ -15,9 +15,10 @@ use crate::utils::gracefully_exit;
 const REPO: &str = "StanleyMasinde/twitter";
 
 enum InstallOutcome {
+    #[cfg(not(windows))]
     Immediate,
     #[cfg(windows)]
-    Deferred,
+    Deferred { log_path: PathBuf },
 }
 
 pub fn run() {
@@ -27,8 +28,8 @@ pub fn run() {
 
     let os_name = match os {
         "macos" => "apple-darwin",
-        "linux" => "linux",
-        "windows" => "windows",
+        "linux" => "unknown-linux-gnu",
+        "windows" => "pc-windows-msvc",
         "android" => "linux-android",
         other_os => {
             let message = format!("Sorry, self update for {} is not supported yet.", other_os);
@@ -44,12 +45,8 @@ pub fn run() {
         }
     };
 
-    let ext = if os_name == "windows" {
-        "zip"
-    } else {
-        "tar.gz"
-    };
-    let binary_name = if os_name == "windows" {
+    let ext = if os == "windows" { "zip" } else { "tar.gz" };
+    let binary_name = if os == "windows" {
         "twitter.exe"
     } else {
         "twitter"
@@ -60,7 +57,11 @@ pub fn run() {
     } else {
         format!("twitter-{}-{}.{}", arch_name, os_name, ext)
     };
-    let work_dir = temp_dir.join(format!("twitter-update-{}", unique_suffix()));
+    let work_dir = temp_dir.join(format!(
+        "twitter-update-{}-{}",
+        std::process::id(),
+        unique_suffix()
+    ));
 
     if let Err(err) = std::fs::create_dir_all(&work_dir) {
         let message = format!("Failed to create temp dir: {err}");
@@ -128,7 +129,8 @@ pub fn run() {
         }
     };
 
-    let target_path = resolve_install_path(binary_name);
+    let target_path = resolve_install_path(binary_name)
+        .unwrap_or_else(|err| gracefully_exit(&format!("Failed to locate install path: {err}")));
     let outcome = match install_binary(&extracted, &target_path) {
         Ok(outcome) => outcome,
         Err(err) => {
@@ -145,6 +147,7 @@ pub fn run() {
     let _ = std::fs::remove_dir_all(&work_dir);
 
     match outcome {
+        #[cfg(not(windows))]
         InstallOutcome::Immediate => {
             let version = match Command::new(&target_path).arg("--version").output() {
                 Ok(output) => {
@@ -163,9 +166,13 @@ pub fn run() {
             println!("> Updated to {}", version);
         }
         #[cfg(windows)]
-        InstallOutcome::Deferred => {
+        InstallOutcome::Deferred { log_path } => {
             println!("> Update scheduled for completion after this process exits");
-            println!("> Run `twitter --version` in a new terminal to verify");
+            println!("> Run `twitter --version` to verify completion");
+            println!(
+                "> Replacement result and any errors: {}",
+                log_path.display()
+            );
         }
     }
 }
@@ -392,18 +399,12 @@ fn extract_from_zip(
     ))
 }
 
-fn resolve_install_path(binary_name: &str) -> PathBuf {
-    if let Ok(dir) = env::var("TWITTER_INSTALL") {
-        return PathBuf::from(dir).join(binary_name);
+fn resolve_install_path(binary_name: &str) -> io::Result<PathBuf> {
+    if let Some(dir) = env::var_os("TWITTER_INSTALL") {
+        return env::current_dir().map(|cwd| cwd.join(dir).join(binary_name));
     }
 
-    if let Ok(exe) = env::current_exe()
-        && exe.file_name().and_then(|p| p.to_str()) == Some(binary_name)
-    {
-        return exe;
-    }
-
-    PathBuf::from("/usr/local/bin").join(binary_name)
+    env::current_exe()
 }
 
 fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
@@ -416,15 +417,20 @@ fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
     }
 
     let temp_target = target_dir.join(format!(
-        ".{}.new",
+        ".{}-{}-{}.new",
         target
             .file_name()
             .and_then(|p| p.to_str())
-            .unwrap_or("twitter")
+            .unwrap_or("twitter"),
+        std::process::id(),
+        unique_suffix()
     ));
 
     let mut input = std::fs::File::open(source)?;
-    let mut output = std::fs::File::create(&temp_target)?;
+    let mut output = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp_target)?;
     io::copy(&mut input, &mut output)?;
     output.flush()?;
 
@@ -440,8 +446,8 @@ fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
 
     #[cfg(windows)]
     {
-        schedule_windows_replace(&temp_target, target)?;
-        return Ok(InstallOutcome::Deferred);
+        let log_path = schedule_windows_replace(&temp_target, target)?;
+        Ok(InstallOutcome::Deferred { log_path })
     }
 
     #[cfg(not(windows))]
@@ -452,14 +458,40 @@ fn install_binary(source: &Path, target: &Path) -> io::Result<InstallOutcome> {
 }
 
 #[cfg(windows)]
-fn schedule_windows_replace(source: &Path, target: &Path) -> io::Result<()> {
-    let source = ps_single_quoted(source);
-    let target = ps_single_quoted(target);
+fn schedule_windows_replace(source: &Path, target: &Path) -> io::Result<PathBuf> {
+    let script_path = source.with_extension("ps1");
+    let log_path = source.with_extension("log");
     let script = format!(
-        "$src='{source}';$dst='{target}';for($i=0;$i -lt 120;$i++){{try{{Move-Item -LiteralPath $src -Destination $dst -Force;exit 0}}catch{{Start-Sleep -Milliseconds 250}}}};exit 1"
+        r#"$src='{source}'
+$dst='{target}'
+$log='{log}'
+try {{
+    Wait-Process -Id {parent_pid} -ErrorAction SilentlyContinue
+    for ($i=0; $i -lt 120; $i++) {{
+        try {{
+            Move-Item -LiteralPath $src -Destination $dst -Force -ErrorAction Stop
+            Add-Content -LiteralPath $log -Value 'Update completed.' -ErrorAction Stop
+            exit 0
+        }} catch {{
+            $failure = $_.Exception.Message
+            Start-Sleep -Milliseconds 250
+        }}
+    }}
+    Add-Content -LiteralPath $log -Value ("Update failed: " + $failure) -ErrorAction Stop
+    exit 1
+}} finally {{
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}}
+"#,
+        source = ps_single_quoted(source),
+        target = ps_single_quoted(target),
+        log = ps_single_quoted(&log_path),
+        parent_pid = std::process::id(),
     );
-
-    Command::new("powershell")
+    std::fs::write(&log_path, "Update pending.\r\n")?;
+    // A UTF-8 BOM lets Windows PowerShell 5.1 read non-ASCII install paths.
+    std::fs::write(&script_path, format!("\u{feff}{script}"))?;
+    let result = Command::new("powershell.exe")
         .args([
             "-NoProfile",
             "-NonInteractive",
@@ -467,11 +499,16 @@ fn schedule_windows_replace(source: &Path, target: &Path) -> io::Result<()> {
             "Bypass",
             "-WindowStyle",
             "Hidden",
-            "-Command",
-            &script,
+            "-File",
         ])
-        .spawn()
-        .map(|_| ())
+        .arg(&script_path)
+        .spawn();
+    if let Err(err) = result {
+        let _ = std::fs::remove_file(&script_path);
+        let _ = std::fs::remove_file(&log_path);
+        return Err(err);
+    }
+    Ok(log_path)
 }
 
 #[cfg(windows)]
