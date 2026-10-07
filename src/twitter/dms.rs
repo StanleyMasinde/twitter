@@ -57,9 +57,10 @@ pub struct SendWithParticipantMessageError {
 
 #[derive(Debug, Deserialize)]
 pub struct ConversationDmEvent {
-    pub dm_conversation_id: String,
-    pub dm_event_id: String,
-    pub text: String,
+    pub dm_conversation_id: Option<String>,
+    pub id: String,
+    pub event_type: String,
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,9 +88,10 @@ pub struct ConversationDmEventsError {
 
 #[derive(Debug, Deserialize)]
 pub struct UserDmEvent {
-    pub dm_conversation_id: String,
-    pub dm_event_id: String,
-    pub text: String,
+    pub dm_conversation_id: Option<String>,
+    pub id: String,
+    pub event_type: String,
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -117,9 +119,10 @@ pub struct UserDmEventsError {
 
 #[derive(Debug, Deserialize)]
 pub struct ParticipantDmEvent {
-    pub dm_conversation_id: String,
-    pub dm_event_id: String,
-    pub text: String,
+    pub dm_conversation_id: Option<String>,
+    pub id: String,
+    pub event_type: String,
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -276,6 +279,7 @@ impl ConversationDmEvents {
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results.as_str())
+            .query_param_kv("dm_event.fields", "dm_conversation_id")
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| ConversationDmEventsError {
@@ -325,6 +329,7 @@ impl UserDmEvents {
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results.as_str())
+            .query_param_kv("dm_event.fields", "dm_conversation_id")
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| UserDmEventsError {
@@ -376,6 +381,7 @@ impl ParticipantDmEvents {
         let response = curl_rest::Client::default()
             .get()
             .query_param_kv("max_results", max_results.as_str())
+            .query_param_kv("dm_event.fields", "dm_conversation_id")
             .header(curl_rest::Header::Authorization(auth_header.into()))
             .send(url.as_str())
             .map_err(|err| ParticipantDmEventsError {
@@ -542,11 +548,15 @@ impl std::fmt::Display for ConversationDmEventsResponse {
                 writeln!(f)?;
             }
 
-            write!(
-                f,
-                "Conversation Id: {}\nMessage Id: {}\nText: {}",
-                event.dm_conversation_id, event.dm_event_id, event.text
-            )?;
+            if let Some(conversation_id) = &event.dm_conversation_id {
+                writeln!(f, "Conversation Id: {conversation_id}")?;
+            }
+            write!(f, "Message Id: {}", event.id)?;
+            if let Some(text) = &event.text {
+                write!(f, "\nText: {text}")?;
+            } else {
+                write!(f, "\nEvent Type: {}", event.event_type)?;
+            }
         }
 
         Ok(())
@@ -561,11 +571,15 @@ impl std::fmt::Display for UserDmEventsResponse {
                 writeln!(f)?;
             }
 
-            write!(
-                f,
-                "Conversation Id: {}\nMessage Id: {}\nText: {}",
-                event.dm_conversation_id, event.dm_event_id, event.text
-            )?;
+            if let Some(conversation_id) = &event.dm_conversation_id {
+                writeln!(f, "Conversation Id: {conversation_id}")?;
+            }
+            write!(f, "Message Id: {}", event.id)?;
+            if let Some(text) = &event.text {
+                write!(f, "\nText: {text}")?;
+            } else {
+                write!(f, "\nEvent Type: {}", event.event_type)?;
+            }
         }
 
         Ok(())
@@ -580,11 +594,15 @@ impl std::fmt::Display for ParticipantDmEventsResponse {
                 writeln!(f)?;
             }
 
-            write!(
-                f,
-                "Conversation Id: {}\nMessage Id: {}\nText: {}",
-                event.dm_conversation_id, event.dm_event_id, event.text
-            )?;
+            if let Some(conversation_id) = &event.dm_conversation_id {
+                writeln!(f, "Conversation Id: {conversation_id}")?;
+            }
+            write!(f, "Message Id: {}", event.id)?;
+            if let Some(text) = &event.text {
+                write!(f, "\nText: {text}")?;
+            } else {
+                write!(f, "\nEvent Type: {}", event.event_type)?;
+            }
         }
 
         Ok(())
@@ -594,6 +612,50 @@ impl std::fmt::Display for ParticipantDmEventsResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    macro_rules! lookup_response_tests {
+        ($name:ident, $response:ty) => {
+            #[test]
+            fn $name() {
+                let default_fields: $response = serde_json::from_str(
+                    r#"{"data":[{"id":"123","event_type":"MessageCreate","text":"hello"}]}"#,
+                )
+                .unwrap();
+                assert_eq!(default_fields.data[0].id, "123");
+                assert_eq!(default_fields.data[0].dm_conversation_id, None);
+                assert_eq!(default_fields.to_string(), "Message Id: 123\nText: hello");
+
+                let expanded_fields: $response = serde_json::from_str(
+                    r#"{"data":[
+                        {"id":"123","event_type":"MessageCreate","text":"hello","dm_conversation_id":"456"},
+                        {"id":"124","event_type":"ParticipantsJoin","participant_ids":["789"],"dm_conversation_id":"456"},
+                        {"id":"125","event_type":"ParticipantsLeave","participant_ids":["789"],"dm_conversation_id":"456"}
+                    ],"meta":{"result_count":3,"next_token":"next"}}"#,
+                )
+                .unwrap();
+                assert_eq!(expanded_fields.data[1].text, None);
+                assert_eq!(expanded_fields.to_string(), concat!(
+                    "Conversation Id: 456\nMessage Id: 123\nText: hello\n\n",
+                    "Conversation Id: 456\nMessage Id: 124\nEvent Type: ParticipantsJoin\n\n",
+                    "Conversation Id: 456\nMessage Id: 125\nEvent Type: ParticipantsLeave"
+                ));
+
+                let empty: $response = serde_json::from_str(r#"{"meta":{"result_count":0}}"#).unwrap();
+                assert!(empty.data.is_empty());
+                assert_eq!(empty.to_string(), "");
+            }
+        };
+    }
+
+    lookup_response_tests!(
+        participant_lookup_parses_api_events,
+        ParticipantDmEventsResponse
+    );
+    lookup_response_tests!(
+        conversation_lookup_parses_api_events,
+        ConversationDmEventsResponse
+    );
+    lookup_response_tests!(user_lookup_parses_api_events, UserDmEventsResponse);
 
     #[test]
     fn test_send_conversation_message_url_uses_conversation_id() {
