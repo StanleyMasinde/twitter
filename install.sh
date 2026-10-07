@@ -37,10 +37,6 @@ detect_platform() {
             arch="armv7"
             os="linux-androideabi"
             ;;
-        i686|i386)
-            [ "${IS_TERMUX:-0}" = 1 ] || { echo "Error: Unsupported architecture: $arch" >&2; exit 1; }
-            arch="i686"
-            ;;
         *) echo "Error: Unsupported architecture: $arch" >&2; exit 1 ;;
     esac
     
@@ -293,7 +289,7 @@ Examples:
 
 Supported Platforms:
   - Linux (x86_64, aarch64)
-  - Android/Termux (aarch64, armv7, x86_64, i686)
+  - Android/Termux (aarch64, armv7, x86_64)
   - macOS/Darwin (x86_64, aarch64)
   - Windows (x86_64, aarch64; when available in a release)
 

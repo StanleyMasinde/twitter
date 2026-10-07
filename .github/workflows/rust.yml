@@ -153,10 +153,6 @@ jobs:
             os: ubuntu-latest
             name: android-x86_64
 
-          - target: i686-linux-android
-            os: ubuntu-latest
-            name: android-i686
-
           - target: aarch64-apple-darwin
             os: macos-latest
             name: darwin-aarch64

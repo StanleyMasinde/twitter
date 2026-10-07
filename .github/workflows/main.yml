@@ -44,11 +44,6 @@ jobs:
             name: android-x86_64
             archive_ext: tar.gz
 
-          - target: i686-linux-android
-            os: ubuntu-latest
-            name: android-i686
-            archive_ext: tar.gz
-
           - target: aarch64-apple-darwin
             os: macos-latest
             name: darwin-aarch64

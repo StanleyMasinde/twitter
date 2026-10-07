@@ -175,7 +175,6 @@ fn normalize_arch(arch: &str) -> Option<&'static str> {
         "x86_64" | "amd64" => Some("x86_64"),
         "aarch64" | "arm64" => Some("aarch64"),
         "armv7l" | "armv6l" | "arm" => Some("arm"),
-        "x86" | "i686" => Some("i686"),
         _ => None,
     }
 }

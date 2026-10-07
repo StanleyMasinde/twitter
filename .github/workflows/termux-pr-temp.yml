@@ -25,7 +25,6 @@ jobs:
           - aarch64-linux-android
           - armv7-linux-androideabi
           - x86_64-linux-android
-          - i686-linux-android
 
     steps:
       - name: Checkout

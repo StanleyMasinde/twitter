@@ -5,9 +5,9 @@ target="${1:?Usage: build-android.sh TARGET}"
 : "${ANDROID_NDK_HOME:?Set ANDROID_NDK_HOME to the Android NDK directory}"
 toolchain="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
-# API 24 supports all four Termux architectures and Android 7 or later.
+# API 24 supports Android 7 or later.
 case "$target" in
-    aarch64-linux-android|x86_64-linux-android|i686-linux-android)
+    aarch64-linux-android|x86_64-linux-android)
         compiler="$target" ;;
     armv7-linux-androideabi)
         compiler="armv7a-linux-androideabi" ;;
