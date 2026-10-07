@@ -81,6 +81,10 @@ impl Default for Schedule {
 
 impl Schedule {
     pub fn new(body: &str, time: &str) -> Self {
+        if body.trim().is_empty() {
+            gracefully_exit("Scheduled tweet body cannot be empty or whitespace-only.");
+        }
+
         let tweet_body = match TweetBody::from_str(body) {
             Ok(body) => body,
             Err(_) => gracefully_exit("Invalid tweet body."),
