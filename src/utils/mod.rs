@@ -67,7 +67,7 @@ pub fn get_config_file() -> PathBuf {
 }
 
 pub fn get_current_user_id() -> Result<String, String> {
-    let mut cfg = load_config();
+    let cfg = load_config();
     let account_index = cfg.current_account;
     cfg.current_account();
     let connection = open_cache_connection()?;
@@ -86,7 +86,7 @@ pub fn user_auth_header() -> String {
 }
 
 pub fn bearer_auth_header() -> String {
-    let mut cfg = load_config();
+    let cfg = load_config();
     let account = cfg.current_account();
     format_bearer_auth_header(account.bearer_token.as_str())
 }

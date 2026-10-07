@@ -82,7 +82,7 @@ impl TokenManager {
     }
 
     pub fn get_token(self) -> String {
-        let mut cfg = load_config();
+        let cfg = load_config();
         let account_id: u32 = cfg.current_account as u32;
         let current_account = cfg.current_account();
         let exists_query = format!(

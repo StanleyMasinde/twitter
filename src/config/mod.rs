@@ -49,7 +49,7 @@ impl FromStr for Config {
 }
 
 impl Config {
-    pub fn current_account(&mut self) -> &Account {
+    pub fn current_account(&self) -> &Account {
         match self.accounts.get(self.current_account) {
             Some(acc) => acc,
             None => {
@@ -65,7 +65,7 @@ impl Config {
 
 impl Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let current = self.accounts.get(self.current_account).unwrap();
+        let current = self.current_account();
         write!(
             f,
             "Current Account: {}\nOAuth 2.0 Client ID: {}",

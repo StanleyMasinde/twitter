@@ -24,7 +24,7 @@ impl Display for OkResponse {
 }
 
 pub fn show() {
-    let mut cfg = load_config();
+    let cfg = load_config();
     let account = cfg.current_account();
     let token = account.bearer_token.as_str();
     let auth_header = format!("Bearer {}", token);
