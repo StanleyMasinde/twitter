@@ -1839,12 +1839,15 @@ pub fn run() {
                 }
             }
             UsersEnum::Following { id, max_results } => {
-                let id = match resolve_user_id(id, utils::get_current_user_id) {
-                    Ok(id) => id,
-                    Err(message) => {
-                        eprintln!("{message}");
-                        return;
-                    }
+                let id = match id {
+                    Some(id) => id,
+                    None => match utils::get_current_user_id() {
+                        Ok(id) => id,
+                        Err(message) => {
+                            eprintln!("{message}");
+                            return;
+                        }
+                    },
                 };
                 let users = twitter::follows::Following::new(id)
                     .max_results(max_results)
@@ -1862,12 +1865,15 @@ pub fn run() {
                 }
             }
             UsersEnum::Followers { id, max_results } => {
-                let id = match resolve_user_id(id, utils::get_current_user_id) {
-                    Ok(id) => id,
-                    Err(message) => {
-                        eprintln!("{message}");
-                        return;
-                    }
+                let id = match id {
+                    Some(id) => id,
+                    None => match utils::get_current_user_id() {
+                        Ok(id) => id,
+                        Err(message) => {
+                            eprintln!("{message}");
+                            return;
+                        }
+                    },
                 };
                 let users = twitter::follows::Followers::new(id)
                     .max_results(max_results)
@@ -1929,16 +1935,6 @@ pub fn run() {
     }
 }
 
-fn resolve_user_id(
-    id: Option<String>,
-    current_user_id: impl FnOnce() -> Result<String, String>,
-) -> Result<String, String> {
-    match id {
-        Some(id) => Ok(id),
-        None => current_user_id(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1986,22 +1982,5 @@ mod tests {
             Args::try_parse_from(["twitter", "me"]).unwrap().command,
             Commands::Me {}
         ));
-    }
-
-    #[test]
-    fn explicit_user_id_skips_current_user_lookup() {
-        assert_eq!(
-            resolve_user_id(Some("123".into()), || panic!("unexpected lookup")),
-            Ok("123".into())
-        );
-    }
-
-    #[test]
-    fn omitted_user_id_resolves_current_user_and_propagates_errors() {
-        assert_eq!(resolve_user_id(None, || Ok("456".into())), Ok("456".into()));
-        assert_eq!(
-            resolve_user_id(None, || Err("lookup failed".into())),
-            Err("lookup failed".into())
-        );
     }
 }
