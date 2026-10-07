@@ -11,12 +11,20 @@ use crate::{
 
 pub fn edit() {
     let config_file = utils::get_config_file();
+    match config_file.try_exists() {
+        Ok(false) => init(),
+        Ok(true) => {}
+        Err(err) => gracefully_exit(&format!("Failed to check the config file: {err}")),
+    }
 
     let status = utils::open_editor(&config_file);
-
-    if status.success() {
-        println!("Config edited.")
+    if !status.success() {
+        gracefully_exit("The editor exited unsuccessfully. Config editing failed.");
     }
+    if !config_file.is_file() {
+        gracefully_exit("Config editing failed: the config file does not exist.");
+    }
+    println!("Config edited.");
 }
 
 pub fn show() {
