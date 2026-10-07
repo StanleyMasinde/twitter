@@ -29,6 +29,7 @@ pub fn run() {
         "macos" => "apple-darwin",
         "linux" => "linux",
         "windows" => "windows",
+        "android" => "linux-android",
         other_os => {
             let message = format!("Sorry, self update for {} is not supported yet.", other_os);
             gracefully_exit(&message)
@@ -54,7 +55,11 @@ pub fn run() {
         "twitter"
     };
 
-    let filename = format!("twitter-{}-{}.{}", arch_name, os_name, ext);
+    let filename = if os == "android" && arch == "arm" {
+        format!("twitter-armv7-linux-androideabi.{ext}")
+    } else {
+        format!("twitter-{}-{}.{}", arch_name, os_name, ext)
+    };
     let work_dir = temp_dir.join(format!("twitter-update-{}", unique_suffix()));
 
     if let Err(err) = std::fs::create_dir_all(&work_dir) {
@@ -170,6 +175,7 @@ fn normalize_arch(arch: &str) -> Option<&'static str> {
         "x86_64" | "amd64" => Some("x86_64"),
         "aarch64" | "arm64" => Some("aarch64"),
         "armv7l" | "armv6l" | "arm" => Some("arm"),
+        "x86" | "i686" => Some("i686"),
         _ => None,
     }
 }

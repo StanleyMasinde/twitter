@@ -5,13 +5,24 @@ set -e
 REPO="StanleyMasinde/twitter"
 VERSION="${1:-latest}"
 INSTALL_DIR="${TWITTER_INSTALL:-/usr/local/bin}"
+if [ -n "${TERMUX_VERSION:-}" ] || { [ -n "${PREFIX:-}" ] && [ -d "$PREFIX/etc/termux" ]; }; then
+    : "${PREFIX:?Termux PREFIX is not set}"
+    INSTALL_DIR="${TWITTER_INSTALL:-$PREFIX/bin}"
+    IS_TERMUX=1
+fi
 
 detect_platform() {
     local os arch
     
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "$os" in
-        linux*) os="unknown-linux-gnu" ;;
+        linux*)
+            if [ "${IS_TERMUX:-0}" = 1 ]; then
+                os="linux-android"
+            else
+                os="unknown-linux-gnu"
+            fi
+            ;;
         darwin*) os="apple-darwin" ;;
         mingw*|msys*|cygwin*) os="pc-windows-msvc" ;;
         *) echo "Error: Unsupported OS: $os" >&2; exit 1 ;;
@@ -21,6 +32,15 @@ detect_platform() {
     case "$arch" in
         x86_64|amd64) arch="x86_64" ;;
         aarch64|arm64) arch="aarch64" ;;
+        armv7l|armv8l)
+            [ "${IS_TERMUX:-0}" = 1 ] || { echo "Error: Unsupported architecture: $arch" >&2; exit 1; }
+            arch="armv7"
+            os="linux-androideabi"
+            ;;
+        i686|i386)
+            [ "${IS_TERMUX:-0}" = 1 ] || { echo "Error: Unsupported architecture: $arch" >&2; exit 1; }
+            arch="i686"
+            ;;
         *) echo "Error: Unsupported architecture: $arch" >&2; exit 1 ;;
     esac
     
@@ -258,7 +278,8 @@ Or with specific version:
   curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh -s v1.4.0
 
 Environment Variables:
-  TWITTER_INSTALL    Installation directory (default: /usr/local/bin)
+  TWITTER_INSTALL    Installation directory (default: /usr/local/bin;
+                    Termux: \$PREFIX/bin)
 
 Examples:
   # Install latest version
@@ -272,6 +293,7 @@ Examples:
 
 Supported Platforms:
   - Linux (x86_64, aarch64)
+  - Android/Termux (aarch64, armv7, x86_64, i686)
   - macOS/Darwin (x86_64, aarch64)
   - Windows (x86_64, aarch64; when available in a release)
 
