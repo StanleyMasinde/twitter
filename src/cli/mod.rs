@@ -595,9 +595,9 @@ enum UsersEnum {
 
     /// Fetch the accounts a user follows
     Following {
-        /// The user id to fetch
+        /// The user id to fetch (defaults to the authenticated user)
         #[arg(long)]
-        id: String,
+        id: Option<String>,
 
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
@@ -606,9 +606,9 @@ enum UsersEnum {
 
     /// Fetch a user's followers
     Followers {
-        /// The user id to fetch
+        /// The user id to fetch (defaults to the authenticated user)
         #[arg(long)]
-        id: String,
+        id: Option<String>,
 
         /// Number of results to fetch
         #[arg(long, default_value_t = 10)]
@@ -1839,6 +1839,13 @@ pub fn run() {
                 }
             }
             UsersEnum::Following { id, max_results } => {
+                let id = match resolve_user_id(id, utils::get_current_user_id) {
+                    Ok(id) => id,
+                    Err(message) => {
+                        eprintln!("{message}");
+                        return;
+                    }
+                };
                 let users = twitter::follows::Following::new(id)
                     .max_results(max_results)
                     .fetch();
@@ -1855,6 +1862,13 @@ pub fn run() {
                 }
             }
             UsersEnum::Followers { id, max_results } => {
+                let id = match resolve_user_id(id, utils::get_current_user_id) {
+                    Ok(id) => id,
+                    Err(message) => {
+                        eprintln!("{message}");
+                        return;
+                    }
+                };
                 let users = twitter::follows::Followers::new(id)
                     .max_results(max_results)
                     .fetch();
@@ -1912,5 +1926,82 @@ pub fn run() {
                 Err(err) => eprintln!("{}", err.message),
             }
         }
+    }
+}
+
+fn resolve_user_id(
+    id: Option<String>,
+    current_user_id: impl FnOnce() -> Result<String, String>,
+) -> Result<String, String> {
+    match id {
+        Some(id) => Ok(id),
+        None => current_user_id(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn followers_and_following_accept_optional_ids() {
+        for subcommand in ["followers", "following"] {
+            let args = Args::try_parse_from(["twitter", "users", subcommand]).unwrap();
+            let command = match args.command {
+                Commands::Users { command } => command,
+                _ => panic!("expected users command"),
+            };
+            match (subcommand, command) {
+                ("followers", UsersEnum::Followers { id, max_results })
+                | ("following", UsersEnum::Following { id, max_results }) => {
+                    assert_eq!(id, None);
+                    assert_eq!(max_results, 10);
+                }
+                _ => panic!("wrong subcommand"),
+            }
+            let args = Args::try_parse_from([
+                "twitter",
+                "users",
+                subcommand,
+                "--id",
+                "123",
+                "--max-results",
+                "25",
+            ])
+            .unwrap();
+            match args.command {
+                Commands::Users {
+                    command: UsersEnum::Followers { id, max_results },
+                }
+                | Commands::Users {
+                    command: UsersEnum::Following { id, max_results },
+                } => {
+                    assert_eq!(id.as_deref(), Some("123"));
+                    assert_eq!(max_results, 25);
+                }
+                _ => panic!("expected follower lookup"),
+            }
+        }
+        assert!(matches!(
+            Args::try_parse_from(["twitter", "me"]).unwrap().command,
+            Commands::Me {}
+        ));
+    }
+
+    #[test]
+    fn explicit_user_id_skips_current_user_lookup() {
+        assert_eq!(
+            resolve_user_id(Some("123".into()), || panic!("unexpected lookup")),
+            Ok("123".into())
+        );
+    }
+
+    #[test]
+    fn omitted_user_id_resolves_current_user_and_propagates_errors() {
+        assert_eq!(resolve_user_id(None, || Ok("456".into())), Ok("456".into()));
+        assert_eq!(
+            resolve_user_id(None, || Err("lookup failed".into())),
+            Err("lookup failed".into())
+        );
     }
 }
