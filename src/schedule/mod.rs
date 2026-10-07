@@ -102,7 +102,25 @@ impl Schedule {
         });
 
         let mut send_time = zone_local_time.timestamp();
-        if send_time < Timestamp::now() {
+        let now = Timestamp::now();
+        if send_time <= now {
+            let clock = time.trim().to_ascii_lowercase();
+            let clock = ["a.m.", "p.m.", "am", "pm"]
+                .iter()
+                .find_map(|suffix| clock.strip_suffix(suffix))
+                .unwrap_or(&clock)
+                .trim();
+            let time_only = clock.split(':').count() <= 3
+                && clock.split(':').all(|part| {
+                    !part.is_empty()
+                        && part.len() <= 2
+                        && part.bytes().all(|byte| byte.is_ascii_digit())
+                });
+            if !time_only {
+                gracefully_exit(&format!(
+                    "Scheduled time '{time}' is in the past. Choose a future date or time."
+                ));
+            }
             send_time = zone_local_time
                 .checked_add(1.day())
                 .unwrap_or_else(|err| {
@@ -111,6 +129,11 @@ impl Schedule {
                     ))
                 })
                 .timestamp();
+            if send_time <= now {
+                gracefully_exit(&format!(
+                    "Scheduled time '{time}' does not resolve to a future time."
+                ));
+            }
         }
         let db = Database::new(SCHEDULE_TABLE_NAME);
         let connection = db.open_connection();
@@ -266,6 +289,7 @@ fn test_data_dir_lock() -> &'static std::sync::Mutex<Option<PathBuf>> {
 mod test {
     use std::{env, fs};
 
+    use jiff::{Timestamp, ToSpan};
     use parse_datetime::parse_datetime;
 
     use crate::schedule::Schedule;
@@ -354,32 +378,24 @@ mod test {
 
     #[test]
     fn roll_forward_when_past() {
-        let got = Schedule::new("body", "2026-01-01 09:00").send_time;
-        let expected = parse_datetime("2026-01-02 09:00")
+        let time = jiff::Zoned::now()
+            .checked_sub(1.hour())
             .unwrap()
-            .as_zoned()
-            .unwrap()
-            .timestamp();
-
-        assert_eq!(got, expected);
+            .strftime("%H:%M")
+            .to_string();
+        let parsed = parse_datetime(&time).unwrap().as_zoned().unwrap().clone();
+        let expected = if parsed.timestamp() <= Timestamp::now() {
+            parsed.checked_add(1.day()).unwrap().timestamp()
+        } else {
+            parsed.timestamp()
+        };
+        assert_eq!(Schedule::new("body", &time).send_time, expected);
     }
 
     #[test]
     fn keep_when_not_past() {
         let got = Schedule::new("body", "2099-01-01 09:00").send_time;
         let expected = parse_datetime("2099-01-01 09:00")
-            .unwrap()
-            .as_zoned()
-            .unwrap()
-            .timestamp();
-
-        assert_eq!(got, expected);
-    }
-
-    #[test]
-    fn roll_forward_non_time_input_when_past() {
-        let got = Schedule::new("body", "2026-01-01 09:00").send_time;
-        let expected = parse_datetime("2026-01-02 09:00")
             .unwrap()
             .as_zoned()
             .unwrap()
