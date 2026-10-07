@@ -1,4 +1,8 @@
-use std::{env::var, fs, io::ErrorKind};
+use std::{
+    env::var,
+    fs,
+    io::{ErrorKind, Write},
+};
 
 use crate::{
     config::{Account, Config},
@@ -63,12 +67,22 @@ pub fn init() {
     }
 
     let config_file = utils::get_config_file();
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(&config_file)
+        .expect("Could not create config file.");
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let file_perms = fs::Permissions::from_mode(0o600);
-        if fs::set_permissions(&config_file, file_perms).is_ok() {
+        if file.set_permissions(file_perms).is_ok() {
             println!("> Config file permissions set to 600")
         } else {
             let message = format!(
@@ -100,7 +114,9 @@ pub fn init() {
         Err(_) => gracefully_exit("Could not serialize the config."),
     };
 
-    fs::write(config_file, serialized_config).expect("Could not write to config file.");
+    file.set_len(0).expect("Could not clear config file.");
+    file.write_all(serialized_config.as_bytes())
+        .expect("Could not write to config file.");
     println!("> The config file was created please fill in your credentials.")
 }
 
