@@ -85,9 +85,15 @@ pub fn user_auth_header() -> String {
     format_bearer_auth_header(&TokenManager::new().get_token())
 }
 
+/// App-only bearer from the config. Required by endpoints that reject OAuth 2.0 user context.
 pub fn bearer_auth_header() -> String {
     let cfg = load_config();
     let account = cfg.current_account();
+    if account.bearer_token.is_empty() {
+        gracefully_exit(
+            "This command needs the app bearer token. Set bearer_token for the current account.",
+        );
+    }
     format_bearer_auth_header(account.bearer_token.as_str())
 }
 

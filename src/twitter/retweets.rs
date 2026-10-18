@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::Response,
-    utils::{bearer_auth_header, get_current_user_id, user_auth_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 
 #[derive(Debug, Deserialize)]
@@ -157,7 +157,7 @@ impl RetweetedBy {
     pub fn fetch(&self) -> Result<Response<RetweetedByResponse>, RetweetedByError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
