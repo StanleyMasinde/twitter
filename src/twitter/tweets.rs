@@ -359,7 +359,7 @@ impl AllTweetCounts {
     pub fn fetch(&self) -> Result<Response<TweetCountsResponse>, TweetCountsError> {
         let url = self.url();
         let query = self.query.as_str();
-        let auth_header = user_auth_header();
+        let auth_header = bearer_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
