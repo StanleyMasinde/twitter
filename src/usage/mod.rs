@@ -1,4 +1,4 @@
-use crate::utils::load_config;
+use crate::utils::bearer_auth_header;
 use serde::Deserialize;
 use std::fmt::Display;
 
@@ -24,10 +24,7 @@ impl Display for OkResponse {
 }
 
 pub fn show() {
-    let cfg = load_config();
-    let account = cfg.current_account();
-    let token = account.bearer_token.as_str();
-    let auth_header = format!("Bearer {}", token);
+    let auth_header = bearer_auth_header();
 
     let response = match curl_rest::Client::default()
         .get()

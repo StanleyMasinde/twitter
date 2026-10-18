@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     twitter::{AUTHOR_EXPANSION, Includes, Response, TWEET_FIELDS, TweetData, USER_FIELDS},
-    utils::{bearer_auth_header, get_current_user_id, user_auth_header},
+    utils::{get_current_user_id, user_auth_header},
 };
 
 const LIST_FIELDS: &str = "id,name,owner_id,private,description,follower_count,member_count";
@@ -327,7 +327,7 @@ impl ListMemberships {
     pub fn fetch(&self) -> Result<Response<ListMembershipsResponse>, ListMembershipsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -379,7 +379,7 @@ impl OwnedLists {
     pub fn fetch(&self) -> Result<Response<OwnedListsResponse>, OwnedListsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -423,7 +423,7 @@ impl ListLookup {
 
     pub fn fetch(&self) -> Result<Response<ListLookupResponse>, ListLookupError> {
         let url = self.url();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -582,7 +582,7 @@ impl ListMembers {
     pub fn fetch(&self) -> Result<Response<ListMembersResponse>, ListMembersError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
@@ -631,7 +631,7 @@ impl ListTweets {
     pub fn fetch(&self) -> Result<Response<ListTweetsResponse>, ListTweetsError> {
         let url = self.url();
         let max_results = self.max_results.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()

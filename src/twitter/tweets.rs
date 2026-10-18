@@ -218,7 +218,7 @@ impl RecentTweets {
         let tweet_fields = TWEET_FIELDS.to_string();
         let user_fields = USER_FIELDS.to_string();
         let expansions = AUTHOR_EXPANSION.to_string();
-        let authorization = bearer_auth_header();
+        let authorization = user_auth_header();
 
         let response = curl_rest::Client::default()
             .get()
